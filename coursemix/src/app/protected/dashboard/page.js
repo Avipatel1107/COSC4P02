@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import RequireAuth from '@/components/RequireAuth'
 import TimeTable from '@/components/TimeTable'
 import DegreeProgress from '@/components/DegreeProgressBar'
 import Spinner from '@/components/Spinner'
@@ -37,7 +36,7 @@ const getEnrolledCoursesCount = async (userId) => {
   }
 };
 
-export default function Dashboard() {
+export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -140,134 +139,132 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <RequireAuth>
-      <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
-        <div className="w-full lg:w-64 bg-white shadow-lg">
-          <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
-            <div className="flex lg:flex-col items-center space-x-4 lg:space-x-0">
-              <ProfileBadger />
-              <h2 className="mt-0 lg:mt-4 font-semibold text-lg">
-                {profile?.first_name} {profile?.last_name}
-              </h2>
-            </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
+      <div className="w-full lg:w-64 bg-white shadow-lg">
+        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
+          <div className="flex lg:flex-col items-center space-x-4 lg:space-x-0">
+            <ProfileBadger />
+            <h2 className="mt-0 lg:mt-4 font-semibold text-lg">
+              {profile?.first_name} {profile?.last_name}
+            </h2>
+          </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-4 lg:space-y-4">
-              <div className="flex items-center space-x-3">
-                <AcademicCapIcon className="h-5 w-5 text-indigo-600" />
-                <div>
-                  <p className="text-sm text-gray-500">Program</p>
-                  <p className="font-medium">
-                    {profile?.programs?.program_name || 'Not specified'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <ChartBarIcon className="h-5 w-5 text-indigo-600" />
-                <div>
-                  <p className="text-sm text-gray-500">Current Average</p>
-                  <p className="font-medium">{profile?.current_average || 'N/A'}%</p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <BookOpenIcon className="h-5 w-5 text-indigo-600" />
-                <div>
-                  <p className="text-sm text-gray-500">Credits Completed</p>
-                  <p className="font-medium">{profile?.credits_completed || '0'}</p>
-                </div>
+          <div className="grid grid-cols-2 lg:grid-cols-1 gap-4 lg:space-y-4">
+            <div className="flex items-center space-x-3">
+              <AcademicCapIcon className="h-5 w-5 text-indigo-600" />
+              <div>
+                <p className="text-sm text-gray-500">Program</p>
+                <p className="font-medium">
+                  {profile?.programs?.program_name || 'Not specified'}
+                </p>
               </div>
             </div>
 
-            <div className="pt-4 lg:pt-6 border-t">
-              <h3 className="text-sm font-medium text-gray-500 mb-4">Quick Stats</h3>
-              <div className="grid grid-cols-1 lg:grid-cols-1 gap-3">
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-sm text-gray-600">Courses This Term</p>
-                  <p className="text-lg font-semibold">{enrolledCount}</p>
-                </div>
-                
-                {termDates && (
-                  <>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <p className="text-sm text-gray-600">Current Term</p>
-                      <p className="text-lg font-semibold">
-                        {termDates.term_type} {termDates.year}
-                      </p>
-                    </div>
+            <div className="flex items-center space-x-3">
+              <ChartBarIcon className="h-5 w-5 text-indigo-600" />
+              <div>
+                <p className="text-sm text-gray-500">Current Average</p>
+                <p className="font-medium">{profile?.current_average || 'N/A'}%</p>
+              </div>
+            </div>
 
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <p className="text-sm text-gray-600">Term Progress</p>
-                      <div className="mt-1 h-2 w-full bg-gray-200 rounded-full">
-                        <div 
-                          className="h-2 bg-indigo-600 rounded-full" 
-                          style={{ 
-                            width: `${Math.min(100, Math.max(0, 
-                              (differenceInDays(new Date(), parseISO(termDates.term_start)) / 
-                               differenceInDays(parseISO(termDates.term_end), parseISO(termDates.term_start))) * 100
-                            ))}%` 
-                          }}
-                        />
-                      </div>
-                      <p className="text-sm mt-1 text-gray-600">
-                        {differenceInDays(parseISO(termDates.term_end), new Date()) + 1} days remaining
-                      </p>
-                    </div>
-
-                    {termDates.reading_week_start && termDates.reading_week_end && (
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-sm text-gray-600">Reading Week</p>
-                        {isWithinInterval(new Date(), {
-                          start: parseISO(termDates.reading_week_start),
-                          end: parseISO(termDates.reading_week_end)
-                        }) ? (
-                          <>
-                            <p className="text-lg font-semibold text-green-600">Currently Active</p>
-                            <p className="text-sm text-gray-600">
-                              Ends in {differenceInDays(parseISO(termDates.reading_week_end), new Date()) + 1} days
-                            </p>
-                          </>
-                        ) : (
-                          parseISO(termDates.reading_week_start) > new Date() ? (
-                            <>
-                              <p className="text-lg font-semibold">
-                                Starts in {differenceInDays(parseISO(termDates.reading_week_start), new Date()) + 1} days
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {dayjs(termDates.reading_week_start).tz("America/Toronto").format('YYYY-MM-DD')} - {dayjs(termDates.reading_week_end).tz("America/Toronto").format('YYYY-MM-DD')}
-                              </p>
-                            </>
-                          ) : (
-                            <p className="text-lg font-semibold text-gray-500">Completed</p>
-                          )
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
+            <div className="flex items-center space-x-3">
+              <BookOpenIcon className="h-5 w-5 text-indigo-600" />
+              <div>
+                <p className="text-sm text-gray-500">Credits Completed</p>
+                <p className="font-medium">{profile?.credits_completed || '0'}</p>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex-1 w-full">
-          <div className="py-4 lg:py-8 px-4 lg:px-8">
-            <div className="max-w-7xl mx-auto">
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-6 lg:mb-8">
-                Welcome back, {profile?.first_name || 'Student'}
-              </h1>
-              
-              <div className="mb-6 lg:mb-8 overflow-x-auto">
-                <TimeTable />
+          <div className="pt-4 lg:pt-6 border-t">
+            <h3 className="text-sm font-medium text-gray-500 mb-4">Quick Stats</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-1 gap-3">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm text-gray-600">Courses This Term</p>
+                <p className="text-lg font-semibold">{enrolledCount}</p>
               </div>
               
-              <div className="mt-8 lg:mt-12">
-                <DegreeProgress />
-              </div>
+              {termDates && (
+                <>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-600">Current Term</p>
+                    <p className="text-lg font-semibold">
+                      {termDates.term_type} {termDates.year}
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-600">Term Progress</p>
+                    <div className="mt-1 h-2 w-full bg-gray-200 rounded-full">
+                      <div 
+                        className="h-2 bg-indigo-600 rounded-full" 
+                        style={{ 
+                          width: `${Math.min(100, Math.max(0, 
+                            (differenceInDays(new Date(), parseISO(termDates.term_start)) / 
+                             differenceInDays(parseISO(termDates.term_end), parseISO(termDates.term_start))) * 100
+                          ))}%` 
+                        }}
+                      />
+                    </div>
+                    <p className="text-sm mt-1 text-gray-600">
+                      {differenceInDays(parseISO(termDates.term_end), new Date()) + 1} days remaining
+                    </p>
+                  </div>
+
+                  {termDates.reading_week_start && termDates.reading_week_end && (
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-600">Reading Week</p>
+                      {isWithinInterval(new Date(), {
+                        start: parseISO(termDates.reading_week_start),
+                        end: parseISO(termDates.reading_week_end)
+                      }) ? (
+                        <>
+                          <p className="text-lg font-semibold text-green-600">Currently Active</p>
+                          <p className="text-sm text-gray-600">
+                            Ends in {differenceInDays(parseISO(termDates.reading_week_end), new Date()) + 1} days
+                          </p>
+                        </>
+                      ) : (
+                        parseISO(termDates.reading_week_start) > new Date() ? (
+                          <>
+                            <p className="text-lg font-semibold">
+                              Starts in {differenceInDays(parseISO(termDates.reading_week_start), new Date()) + 1} days
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {dayjs(termDates.reading_week_start).tz("America/Toronto").format('YYYY-MM-DD')} - {dayjs(termDates.reading_week_end).tz("America/Toronto").format('YYYY-MM-DD')}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-lg font-semibold text-gray-500">Completed</p>
+                        )
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
-    </RequireAuth>
+
+      <div className="flex-1 w-full">
+        <div className="py-4 lg:py-8 px-4 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-6 lg:mb-8">
+              Welcome back, {profile?.first_name || 'Student'}
+            </h1>
+            
+            <div className="mb-6 lg:mb-8 overflow-x-auto">
+              <TimeTable />
+            </div>
+            
+            <div className="mt-8 lg:mt-12">
+              <DegreeProgress />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 } 

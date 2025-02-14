@@ -1,16 +1,15 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import NewProfileSetup from '@/components/NewProfileSetup'
-import RequireAuth from '@/components/RequireAuth'
 import Spinner from '@/components/Spinner'
 
-const NewProfileSetupPage = () => {
+export default function NewProfileSetupPage() {
   return (
-    <RequireAuth>
+    <div className="min-h-screen">
       <NewProfileSetup />
-    </RequireAuth>
+    </div>
   )
 }
-
-export default NewProfileSetupPage

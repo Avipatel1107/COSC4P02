@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,12 +11,48 @@ import Spinner from '@/components/Spinner'
 
 export default function SignIn() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [activeInput, setActiveInput] = useState(null)
+
+  useEffect(() => {
+    // Check if already signed in
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error) throw error
+        
+        if (session?.user) {
+          console.log('Session found, checking profile')
+          const { data: profile, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('is_profile_setup')
+            .eq('user_id', session.user.id)
+            .single()
+
+          if (profileError && profileError.code !== 'PGRST116') {
+            throw profileError
+          }
+
+          const redirect = searchParams.get('redirect')
+          if (!profile || profile.is_profile_setup !== true) {
+            router.push('/protected/profile-setup')
+          } else if (redirect && redirect.startsWith('/protected')) {
+            router.push(redirect)
+          } else {
+            router.push('/protected/dashboard')
+          }
+        }
+      } catch (err) {
+        console.error('Session check error:', err)
+      }
+    }
+    checkSession()
+  }, [router, searchParams])
 
   useEffect(() => {
     // Load stored credentials if "Remember Me" was checked
@@ -43,14 +79,10 @@ export default function SignIn() {
         password,
       })
 
-      if (signInError) {
-        console.error('Sign in error:', signInError)
-        throw signInError
-      }
+      if (signInError) throw signInError
 
       console.log('Sign in successful:', data)
 
-      // Save credentials if "Remember Me" is checked
       if (rememberMe) {
         localStorage.setItem('rememberedEmail', email)
         localStorage.setItem('rememberedPassword', password)
@@ -61,34 +93,27 @@ export default function SignIn() {
         localStorage.removeItem('rememberMe')
       }
 
-      // Check if user has a profile and if it's setup
+      // Wait for session to be established
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('is_profile_setup')
         .eq('user_id', data.user.id)
-        .single();
+        .single()
 
-      console.log('Profile check result:', { profile, error: profileError });
-
-      if (profileError) {
-        if (profileError.code === 'PGRST116') {  // Record not found
-          console.log('No profile found, redirecting to profile setup');
-          router.push('/protected/profile-setup');
-          return;
-        }
-        throw profileError;
+      if (profileError && profileError.code !== 'PGRST116') {
+        throw profileError
       }
 
-      // Redirect based on profile setup status
+      const redirect = searchParams.get('redirect')
       if (!profile || profile.is_profile_setup !== true) {
-        console.log('Profile incomplete, redirecting to profile setup');
-        router.push('/protected/profile-setup');
+        router.push('/protected/profile-setup')
+      } else if (redirect && redirect.startsWith('/protected')) {
+        router.push(redirect)
       } else {
-        console.log('Profile complete, redirecting to dashboard');
-        router.push('/protected/dashboard');
+        router.push('/protected/dashboard')
       }
-      
-      router.refresh()
     } catch (error) {
       console.error('Sign in error:', error)
       setError(error.message)
