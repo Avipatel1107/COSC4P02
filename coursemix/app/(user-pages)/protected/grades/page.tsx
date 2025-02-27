@@ -1,6 +1,7 @@
 // Author: Russell
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export default async function Grades () {
   // This line has been borrowed from other pages "^w^
@@ -16,6 +17,15 @@ export default async function Grades () {
     return redirect("/sign-in");
   }
 
+  // Get user's program
+  const program = await supabase
+    .from("user_profiles")
+    .select("program_id")
+    .eq("user_id", user.id)
+    .single();
+  
+  console.log(program.data ? program.data.program_id : "program.data was not found");
+
   return (
     <main className="bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen py-6">
       <div className="max-w-6xl mx-auto px-4">
@@ -26,10 +36,21 @@ export default async function Grades () {
           </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-          <h2 className="text-xl font-bold text-center">This page is under construction!</h2>
-          <p className="text-center">Please check back later.</p>
-        </div>
+        {
+          // If the user does not have a program, show this notice
+          program.data && program.data.program_id ? "" : (
+            <div className="bg-yellow-200 rounded-lg shadow-md p-6 border border-yellow-400 text-center">
+              <h2 className="text-xl font-bold text-gray-800">No Program Found</h2>
+              <p className="text-gray-600 mt-2">
+                For best results, please&nbsp;
+                <Link href="/protected/profile/edit" className="text-blue-600">
+                  select a program
+                </Link>.
+              </p>
+            </div>
+          )
+        }
+
       </div>
     </main>
   );
