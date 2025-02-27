@@ -25,6 +25,7 @@ export default async function Grades () {
     .single();
 
   const has_program = program.data && program.data.program_id;
+  var program_has;
 
   // Get all courses that are part of the user's program (provided that exists)
   if (has_program) {
@@ -32,8 +33,12 @@ export default async function Grades () {
       .from("program_requirements")
       .select("course_code, credit_weight, min_grade, requirement_type, year")
       .eq("program_id", program.data.program_id);
-
-    console.log(courses_p);
+    
+    program_has = courses_p.data && courses_p.data.length;
+    
+    if (program_has) {
+      // Sort these courses by year
+    }
   }
 
   return (
@@ -56,6 +61,23 @@ export default async function Grades () {
                 <Link href="/protected/profile/edit" className="text-blue-600">
                   select a program
                 </Link>.
+              </p>
+            </div>
+          )
+        }
+
+        {
+          // If the user's program has no data, show this notice
+          program_has ? "" : (
+            <div className="bg-yellow-200 rounded-lg shadow-md p-6 border border-yellow-400 text-center">
+              <h2 className="text-xl font-bold text-gray-800">Sorry About This</h2>
+              <p className="text-gray-600 mt-2">Failed to load your program's course requirements.</p>
+              <p className="text-gray-600 mt-2">
+                Please&nbsp;
+                <Link href="/contact" className="text-blue-600">
+                  let us know
+                </Link>
+                &nbsp;that you saw this message and your current program, so that we can fix this issue.
               </p>
             </div>
           )
