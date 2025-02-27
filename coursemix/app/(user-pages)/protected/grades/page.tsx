@@ -23,8 +23,18 @@ export default async function Grades () {
     .select("program_id")
     .eq("user_id", user.id)
     .single();
-  
-  console.log(program.data ? program.data.program_id : "program.data was not found");
+
+  const has_program = program.data && program.data.program_id;
+
+  // Get all courses that are part of the user's program (provided that exists)
+  if (has_program) {
+    const courses_p = await supabase
+      .from("program_requirements")
+      .select("course_code, credit_weight, min_grade, requirement_type, year")
+      .eq("program_id", program.data.program_id);
+
+    console.log(courses_p);
+  }
 
   return (
     <main className="bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen py-6">
@@ -38,7 +48,7 @@ export default async function Grades () {
 
         {
           // If the user does not have a program, show this notice
-          program.data && program.data.program_id ? "" : (
+          has_program ? "" : (
             <div className="bg-yellow-200 rounded-lg shadow-md p-6 border border-yellow-400 text-center">
               <h2 className="text-xl font-bold text-gray-800">No Program Found</h2>
               <p className="text-gray-600 mt-2">
