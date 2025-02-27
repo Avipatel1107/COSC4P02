@@ -25,7 +25,7 @@ export default async function Grades () {
     .single();
 
   const has_program = program.data && program.data.program_id;
-  var program_has;
+  var program_has; var year = 1;
 
   // Get all courses that are part of the user's program (provided that exists)
   if (has_program) {
@@ -35,9 +35,44 @@ export default async function Grades () {
       .eq("program_id", program.data.program_id);
     
     program_has = courses_p.data && courses_p.data.length;
-    
-    if (program_has) {
+    var year_divs = [];
+
+    if (courses_p.data) {
       // Sort these courses by year
+      var hits = 0;
+
+      do {
+        var courses_year = [];
+        hits = 0;
+
+        // Going through the list of fetched courses...
+        for (var i in courses_p.data) {
+          var course = courses_p.data[i];
+
+          // If that course is in this year
+          if (course.year == year) {
+            // Add a representation of that course
+            courses_year.push(<div className="mt-4 bg-white rounded-lg shadow-md p-6 border border-gray-200">
+              <h3 className="font-bold text-gray-800">{course.course_code}</h3>
+            </div>);
+            hits ++;
+          }
+        }
+
+        // Found a course this year?
+        if (hits > 0) {
+          year_divs.push(<div>
+            <h2 className="text-xl font-bold text-gray-800">Year {year}</h2>
+            {courses_year}
+          </div>);
+
+          // Repeat for next year
+          year ++;
+        } else {
+          // Means we went off the end of the list
+          year --;
+        }
+      } while (hits > 0);
     }
   }
 
@@ -82,6 +117,8 @@ export default async function Grades () {
             </div>
           )
         }
+
+        <div className={ "grid gap-4 grid-cols-" + year }>{year_divs}</div>
 
       </div>
     </main>
