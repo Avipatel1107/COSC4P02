@@ -89,7 +89,7 @@ export default async function Grades () {
         {
           // If the user does not have a program, show this notice
           has_program ? "" : (
-            <div className="bg-yellow-200 rounded-lg shadow-md p-6 border border-yellow-400 text-center">
+            <div className="my-5 bg-yellow-200 rounded-lg shadow-md p-6 border border-yellow-400 text-center">
               <h2 className="text-xl font-bold text-gray-800">No Program Found</h2>
               <p className="text-gray-600 mt-2">
                 For best results, please&nbsp;
@@ -104,7 +104,7 @@ export default async function Grades () {
         {
           // If the user's program has no data, show this notice
           program_has ? "" : (
-            <div className="bg-yellow-200 rounded-lg shadow-md p-6 border border-yellow-400 text-center">
+            <div className="my-5 bg-yellow-200 rounded-lg shadow-md p-6 border border-yellow-400 text-center">
               <h2 className="text-xl font-bold text-gray-800">Sorry About This</h2>
               <p className="text-gray-600 mt-2">Failed to load your program's course requirements.</p>
               <p className="text-gray-600 mt-2">
@@ -118,7 +118,7 @@ export default async function Grades () {
           )
         }
 
-        <div className="bg-yellow-200 rounded-lg shadow-md p-6 border border-yellow-400 text-center">
+        <div className="my-5 bg-yellow-200 rounded-lg shadow-md p-6 border border-yellow-400 text-center">
           <h2 className="text-xl font-bold text-gray-800">Sorry About This</h2>
           <p className="text-gray-600 mt-2">
             The feature of matching your currently enrolled classes to your&nbsp;
