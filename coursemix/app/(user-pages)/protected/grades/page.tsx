@@ -118,6 +118,15 @@ export default async function Grades () {
           )
         }
 
+        <div className="bg-yellow-200 rounded-lg shadow-md p-6 border border-yellow-400 text-center">
+          <h2 className="text-xl font-bold text-gray-800">Sorry About This</h2>
+          <p className="text-gray-600 mt-2">
+            The feature of matching your currently enrolled classes to your&nbsp;
+            program's requirements is still a work in progress.
+          </p>
+          <p className="text-gray-600 mt-2">You can still use the grades feature though!</p>
+        </div>
+
         <div className={ "grid gap-4 grid-cols-" + year }>{year_divs}</div>
 
       </div>
