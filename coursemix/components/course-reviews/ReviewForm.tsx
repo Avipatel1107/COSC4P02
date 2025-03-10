@@ -26,10 +26,12 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
   useEffect(() => {
     async function fetchReviews() {
       const supabase = createClient();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("reviews")
         .select("*")
         .eq("course_id", courseId);
+  
+      console.log("Fetched Reviews:", data, "Error:", error); // Debugging line
       if (data) setReviews(data);
     }
     fetchReviews();

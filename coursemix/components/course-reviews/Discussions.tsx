@@ -20,13 +20,15 @@ interface Post {
 }
 
 export default function Discussions({ courseId, courseName }: DiscussionsProps) {
-  const supabase = createClient();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [newPost, setNewPost] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const supabase = createClient(); // Initialize Supabase client
+  const [posts, setPosts] = useState<Post[]>([]); // State to store discussion posts
+  const [newPost, setNewPost] = useState(""); // State to store new post content
+  const [isSubmitting, setIsSubmitting] = useState(false); // State to manage form submission
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // State to store current user ID
 
+  // Function to fetch discussion posts and user profiles
   async function fetchPosts() {
+    // Fetch discussion posts for the selected course
     const { data: discussionsData, error: discussionsError } = await supabase
       .from("discussions")
       .select("*")
@@ -60,25 +62,28 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
       };
     });
 
-    setPosts(combinedPosts);
+    setPosts(combinedPosts); // Update the posts state with combined data
   }
 
+  // useEffect to fetch current user and posts when the component mounts or courseId changes
   useEffect(() => {
     async function getCurrentUser() {
       const { data } = await supabase.auth.getUser();
       if (data?.user) {
-        setCurrentUserId(data.user.id);
+        setCurrentUserId(data.user.id); // Set the current user ID
       }
     }
 
-    getCurrentUser();
-    fetchPosts();
+    getCurrentUser(); // Fetch current user
+    fetchPosts(); // Fetch posts
   }, [courseId]);
 
+  // Function to handle form submission
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setIsSubmitting(true);
+    e.preventDefault(); // Prevent default form submission
+    setIsSubmitting(true); // Set submitting state to true
 
+    // Get the current user
     const { data } = await supabase.auth.getUser();
     if (!data?.user) {
       toast.error("User not authenticated");
@@ -86,6 +91,7 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
       return;
     }
 
+    // Insert new post into the discussions table
     const { error } = await supabase
       .from("discussions")
       .insert({
@@ -98,12 +104,11 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
       toast.error("Failed to post discussion");
     } else {
       toast.success("Discussion posted successfully");
-      setNewPost("");
-      // Fetch updated posts after submission
+      setNewPost(""); // Clear the new post input
       fetchPosts(); // Refetch the posts after submitting
     }
 
-    setIsSubmitting(false);
+    setIsSubmitting(false); // Set submitting state to false
   }
 
   return (
