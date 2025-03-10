@@ -35,22 +35,40 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
     fetchReviews();
   }, [courseId]);
 
-  async function handleSubmit() {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     setIsSubmitting(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      toast.error("User not authenticated");
+      setIsSubmitting(false);
+      return;
+    }
 
-    console.log("Submitting review:", { 
-      user_id: user.id, 
-      course_id: courseId, 
-      review, 
-      difficulty 
-    });
-    toast.success("Review submitted (not saved yet, backend needed)");
-    
-    setReview("");
-    setDifficulty("");
+    const { error } = await supabase
+      .from("reviews")
+      .insert({
+        user_id: user.id,
+        course_id: courseId,
+        review,
+        difficulty,
+      });
+
+    if (error) {
+      toast.error("Failed to submit review");
+    } else {
+      toast.success("Review submitted successfully");
+      setReview("");
+      setDifficulty("");
+      // Fetch the updated reviews
+      const { data } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("course_id", courseId);
+      if (data) setReviews(data);
+    }
+
     setIsSubmitting(false);
   }
 
@@ -86,32 +104,35 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
         </ul>
       )}
       
-      <Input 
-        value={review} 
-        onChange={(e) => setReview(e.target.value)} 
-        placeholder="Write a review..." 
-        className="mt-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-      />
+      <form onSubmit={handleSubmit}>
+        <Input 
+          value={review} 
+          onChange={(e) => setReview(e.target.value)} 
+          placeholder="Write a review..." 
+          className="mt-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+        />
 
-      <div className="mt-4 space-x-2">
-        {["Easy", "Medium", "Hard"].map((level) => (
-          <Button
-            key={level}
-            onClick={() => setDifficulty(level)}
-            className={`${difficulty === level ? getDifficultyColor(level) : "bg-gray-300 dark:bg-gray-600"} text-white`}
-          >
-            {level}
-          </Button>
-        ))}
-      </div>
-      
-      <Button 
-        onClick={handleSubmit} 
-        disabled={isSubmitting || !difficulty}
-        className="bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white mt-6 font-medium py-2 px-4 rounded-md transition-all duration-200 shadow-sm hover:shadow-md"
-      >
-        Submit Review
-      </Button>
+        <div className="mt-4 space-x-2">
+          {["Easy", "Medium", "Hard"].map((level) => (
+            <Button
+              key={level}
+              type="button"
+              onClick={() => setDifficulty(level)}
+              className={`${difficulty === level ? getDifficultyColor(level) : "bg-gray-300 dark:bg-gray-600"} text-white`}
+            >
+              {level}
+            </Button>
+          ))}
+        </div>
+        
+        <Button 
+          type="submit"
+          disabled={isSubmitting || !difficulty}
+          className="bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white mt-6 font-medium py-2 px-4 rounded-md transition-all duration-200 shadow-sm hover:shadow-md"
+        >
+          Submit Review
+        </Button>
+      </form>
     </div>
   );
 }
