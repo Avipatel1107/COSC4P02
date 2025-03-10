@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Course } from "@/types";
 import ReviewForm from "@/components/course-reviews/ReviewForm";
+import Discussions from "@/components/course-reviews/Discussions";
 
 export default function CourseReviewsPage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -62,10 +63,13 @@ export default function CourseReviewsPage() {
           </select>
           
           {selectedCourse && (
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">{selectedCourse.course_code}</h2>
-              <ReviewForm courseId={selectedCourse.id} courseName={selectedCourse.course_code} />
-            </div>
+            <>
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">{selectedCourse.course_code}</h2>
+                <ReviewForm courseId={selectedCourse.id} courseName={selectedCourse.course_code} />
+              </div>
+              <Discussions courseId={selectedCourse.id} courseName={selectedCourse.course_code} />
+            </>
           )}
         </>
       )}
