@@ -20,13 +20,15 @@ interface Post {
 }
 
 export default function Discussions({ courseId, courseName }: DiscussionsProps) {
-  const supabase = createClient();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [newPost, setNewPost] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const supabase = createClient(); // Initialize Supabase client
+  const [posts, setPosts] = useState<Post[]>([]); // State to store discussion posts
+  const [newPost, setNewPost] = useState(""); // State to store new post content
+  const [isSubmitting, setIsSubmitting] = useState(false); // State to manage form submission
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // State to store current user ID
 
+  // Function to fetch discussion posts and user profiles
   async function fetchPosts() {
+    // Fetch discussion posts for the selected course
     const { data: discussionsData, error: discussionsError } = await supabase
       .from("discussions")
       .select("*")
@@ -60,25 +62,28 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
       };
     });
 
-    setPosts(combinedPosts);
+    setPosts(combinedPosts); // Update the posts state with combined data
   }
 
+  // useEffect to fetch current user and posts when the component mounts or courseId changes
   useEffect(() => {
     async function getCurrentUser() {
       const { data } = await supabase.auth.getUser();
       if (data?.user) {
-        setCurrentUserId(data.user.id);
+        setCurrentUserId(data.user.id); // Set the current user ID
       }
     }
 
-    getCurrentUser();
-    fetchPosts();
+    getCurrentUser(); // Fetch current user
+    fetchPosts(); // Fetch posts
   }, [courseId]);
 
+  // Function to handle form submission
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setIsSubmitting(true);
+    e.preventDefault(); // Prevent default form submission
+    setIsSubmitting(true); // Set submitting state to true
 
+    // Get the current user
     const { data } = await supabase.auth.getUser();
     if (!data?.user) {
       toast.error("User not authenticated");
@@ -86,6 +91,7 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
       return;
     }
 
+    // Insert new post into the discussions table
     const { error } = await supabase
       .from("discussions")
       .insert({
@@ -98,35 +104,43 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
       toast.error("Failed to post discussion");
     } else {
       toast.success("Discussion posted successfully");
-      setNewPost("");
-      // Fetch updated posts after submission
+      setNewPost(""); // Clear the new post input
       fetchPosts(); // Refetch the posts after submitting
     }
 
-    setIsSubmitting(false);
+    setIsSubmitting(false); // Set submitting state to false
   }
 
   return (
     <div className="rounded-lg shadow-sm p-4 bg-white dark:bg-gray-800 transition-all hover:shadow-md group mx-4 my-6">
+      {/* Title for the discussions section */}
       <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Discussions for {courseName}</h3>
+      
+      {/* Container for displaying discussion posts */}
       <div className="space-y-4">
         {posts.map((post) => (
           <div
             key={post.id}
-            className={`p-3 rounded-lg flex flex-col space-y-2 ${post.user_id === currentUserId ? "items-end bg-teal-50 dark:bg-teal-800" : "items-start bg-gray-50 dark:bg-gray-800"}`}
+            className="flex flex-col items-start"
           >
+            {/* Display user name and post timestamp */}
             <div className="flex items-center space-x-2">
-              <span className="font-semibold text-gray-800 dark:text-gray-100">
+              <span className="font-semibold text-black dark:text-gray-100">
                 {post.first_name} {post.last_name}
               </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-sm text-black dark:text-gray-400">
                 {new Date(post.created_at).toLocaleString()}
               </span>
             </div>
-            <p className="text-gray-600 dark:text-gray-300">{post.content}</p>
+            {/* Display post content */}
+            <div className={`p-2 rounded-lg ${post.user_id === currentUserId ? "bg-teal-700 dark:bg-teal-800" : "bg-gray-300 dark:bg-gray-700"}`}>
+              <p className="text-black dark:text-gray-300">{post.content}</p>
+            </div>
           </div>
         ))}
       </div>
+      
+      {/* Form for submitting a new discussion post */}
       <form onSubmit={handleSubmit} className="mt-4">
         <Input
           value={newPost}
@@ -137,7 +151,7 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white mt-6 font-medium py-2 px-4 rounded-md transition-all duration-200 shadow-sm hover:shadow-md"
+          className="bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white mt-6 font-medium py-2 px-4 rounded-md transition-all duration-200 shadow-sm hover:shadow-md"
         >
           Post
         </Button>
