@@ -240,6 +240,30 @@ const getCourseTypeInfo = (type?: string) => {
   };
 };
 
+// Function to check if course duration is valid for current date
+const isCourseDurationValid = (courseDuration?: string | number): boolean => {
+  if (!courseDuration) return false;
+  
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11
+  
+  // Convert duration to string in case it's a number
+  const duration = String(courseDuration);
+  
+  // September (9) to December (12): Allow Duration 1 (full year) and Duration 2 (fall term)
+  if (currentMonth >= 9 && currentMonth <= 12) {
+    return ['1', 'D1', '2', 'D2'].includes(duration);
+  }
+  
+  // January (1) to April (4): Allow only Duration 3 (winter term)
+  if (currentMonth >= 1 && currentMonth <= 4) {
+    return ['3', 'D3'].includes(duration);
+  }
+  
+  // For all other months (May-August), allow any duration
+  return true;
+};
+
 export default function CourseSearch({ userId, term, year }: CourseSearchProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [courses, setCourses] = useState<Course[]>([]);
@@ -554,6 +578,31 @@ export default function CourseSearch({ userId, term, year }: CourseSearchProps) 
         return;
       }
 
+      // Get the course details for the course being enrolled
+      const selectedCourse = courses.find(course => course.id === courseId);
+      if (!selectedCourse) {
+        setMessage({
+          text: 'Course information not found. Please try again.',
+          type: 'error',
+        });
+        return;
+      }
+
+      // Check if the course duration is valid for the current date
+      if (!isCourseDurationValid(selectedCourse.course_duration)) {
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth() + 1;
+        const errorMessage = currentMonth >= 9 && currentMonth <= 12
+          ? 'Currently Fall term (September-December), you can only register for Full Year (D1) or Fall Term (D2) courses.'
+          : 'Currently Winter term (January-April), you can only register for Winter Term (D3) courses.';
+        
+        setMessage({
+          text: errorMessage,
+          type: 'error',
+        });
+        return;
+      }
+
       // Validate term value
       const validTerms = ['Winter', 'Fall', 'Spring', 'Summer'];
       if (!validTerms.includes(term)) {
@@ -569,16 +618,6 @@ export default function CourseSearch({ userId, term, year }: CourseSearchProps) 
       if (enrolledCourseIds.has(courseId)) {
         setMessage({
           text: 'You are already enrolled in this course.',
-          type: 'error',
-        });
-        return;
-      }
-
-      // Get the course details for the course being enrolled
-      const selectedCourse = courses.find(course => course.id === courseId);
-      if (!selectedCourse) {
-        setMessage({
-          text: 'Course information not found. Please try again.',
           type: 'error',
         });
         return;
