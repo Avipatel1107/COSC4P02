@@ -121,7 +121,7 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
         {posts.map((post) => (
           <div
             key={post.id}
-            className={`flex flex-col items-end ${post.user_id === currentUserId ? "self-end" : "self-start"}`}
+            className="flex flex-col items-start"
           >
             {/* Display user name and post timestamp */}
             <div className="flex items-center space-x-2">
