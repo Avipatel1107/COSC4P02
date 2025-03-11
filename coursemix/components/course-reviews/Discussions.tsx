@@ -113,25 +113,34 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
 
   return (
     <div className="rounded-lg shadow-sm p-4 bg-white dark:bg-gray-800 transition-all hover:shadow-md group mx-4 my-6">
+      {/* Title for the discussions section */}
       <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Discussions for {courseName}</h3>
+      
+      {/* Container for displaying discussion posts */}
       <div className="space-y-4">
         {posts.map((post) => (
           <div
             key={post.id}
-            className={`p-3 rounded-lg flex flex-col space-y-2 ${post.user_id === currentUserId ? "items-end bg-teal-50 dark:bg-teal-800" : "items-start bg-gray-50 dark:bg-gray-800"}`}
+            className={`flex flex-col items-end ${post.user_id === currentUserId ? "self-end" : "self-start"}`}
           >
+            {/* Display user name and post timestamp */}
             <div className="flex items-center space-x-2">
-              <span className="font-semibold text-gray-800 dark:text-gray-100">
+              <span className="font-semibold text-black dark:text-gray-100">
                 {post.first_name} {post.last_name}
               </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-sm text-black dark:text-gray-400">
                 {new Date(post.created_at).toLocaleString()}
               </span>
             </div>
-            <p className="text-gray-600 dark:text-gray-300">{post.content}</p>
+            {/* Display post content */}
+            <div className={`p-2 rounded-lg ${post.user_id === currentUserId ? "bg-teal-700 dark:bg-teal-800" : "bg-gray-300 dark:bg-gray-700"}`}>
+              <p className="text-black dark:text-gray-300">{post.content}</p>
+            </div>
           </div>
         ))}
       </div>
+      
+      {/* Form for submitting a new discussion post */}
       <form onSubmit={handleSubmit} className="mt-4">
         <Input
           value={newPost}
@@ -142,7 +151,7 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white mt-6 font-medium py-2 px-4 rounded-md transition-all duration-200 shadow-sm hover:shadow-md"
+          className="bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white mt-6 font-medium py-2 px-4 rounded-md transition-all duration-200 shadow-sm hover:shadow-md"
         >
           Post
         </Button>
