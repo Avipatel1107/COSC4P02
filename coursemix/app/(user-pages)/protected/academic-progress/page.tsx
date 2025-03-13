@@ -180,180 +180,158 @@ export default async function GradesPage() {
     }
   }
 
-  // Calculate graduation date projection
-  let completedCourses = 0;
-  let inProgressCourses = 0;
-  
-  // Get the highest year from program courses to determine program length
-  const maxProgramYear = programCourses.length > 0 
-    ? Math.max(...programCourses.map((course: any) => course.year || 0))
-    : 4; // Default to 4 years if no program data
-  
-  // Filter out failed courses and courses below minimum grade
-  if (grades) {
-    grades.forEach(grade => {
-      // Get the requirement for this course, if it exists
-      const requirement = programCourses.find((req: any) => req.course_code === grade.course_code);
-      const minGradeRequired = requirement?.min_grade || 50; // Default to 50 if not specified
-      
-      // Get the numeric value of the grade
-      const gradeValue = decryptedGrades[grade.id];
-      let numericGrade = 0;
-      
-      if (gradeValue && gradeValue !== 'N/A' && gradeValue !== 'Error' && gradeValue !== 'Decryption Error') {
-        if (!isNaN(Number(gradeValue))) {
-          numericGrade = Number(gradeValue);
-        } else {
-          // Convert letter grades to numeric
-          switch(gradeValue) {
-            case 'A+': numericGrade = 90; break;
-            case 'A': numericGrade = 85; break;
-            case 'A-': numericGrade = 80; break;
-            case 'B+': numericGrade = 77; break;
-            case 'B': numericGrade = 75; break;
-            case 'B-': numericGrade = 70; break;
-            case 'C+': numericGrade = 67; break;
-            case 'C': numericGrade = 65; break;
-            case 'C-': numericGrade = 60; break;
-            case 'D+': numericGrade = 57; break;
-            case 'D': numericGrade = 55; break;
-            case 'D-': numericGrade = 50; break;
-            case 'F': numericGrade = 45; break;
-            default: numericGrade = 0;
-          }
-        }
-      }
-      
-      // Count completed courses that meet minimum grade requirements
-      if (grade.status === 'completed' && numericGrade >= minGradeRequired) {
-        completedCourses++;
-      } else if (grade.status === 'in-progress') {
-        // Count in-progress courses toward graduation progress
-        inProgressCourses++;
-      }
-    });
-  }
-  
-  // Calculate graduation projection
-  const now = getCurrentDateET();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-  
-  // Calculate total courses required (default to 40 if not specified)
-  const totalRequiredCourses = programInfo?.total_credits || 40;
-  
-  // Calculate remaining courses, accounting for in-progress courses
-  const effectiveCompletedCourses = completedCourses + inProgressCourses;
-  const remainingCourses = Math.max(0, totalRequiredCourses - effectiveCompletedCourses);
-  
-  // Standard course load
-  const coursesPerTerm = 5;
-  
-  // Special case: if 5 or fewer courses remaining, graduate next term
-  let graduationTerm: string;
-  let graduationYear = currentYear;
-  let graduationMonth = currentMonth;
-  
-  // Determine current term
-  const isFallTerm = currentMonth >= 8 && currentMonth <= 11; // Sept-Dec
-  const isWinterTerm = currentMonth >= 0 && currentMonth <= 3; // Jan-Apr
-  const isSpringTerm = currentMonth >= 4 && currentMonth <= 7; // May-Aug
-  
-  if (remainingCourses <= coursesPerTerm) {
-    // Student will graduate next term
-    if (isFallTerm) {
-      // If currently in Fall, graduate in Winter
-      graduationTerm = "Winter";
-      graduationMonth = 0; // January
-      graduationYear = currentYear + 1;
-    } else if (isWinterTerm) {
-      // If currently in Winter, graduate in Spring
-      graduationTerm = "Spring";
-      graduationMonth = 4; // May
+  // Implement graduation tracking algorithm
+  const calculateGraduationProjection = () => {
+    // Default values
+    const coursesPerTerm = 5; // Standard course load per term
+    const totalRequiredCourses = programInfo?.total_credits || 40;
+    
+    // Count completed and in-progress courses
+    const completedCourses = grades?.filter(g => g.status === "completed").length || 0;
+    const inProgressCourses = grades?.filter(g => g.status === "in-progress").length || 0;
+    
+    // Calculate remaining courses after current term
+    const currentProgress = completedCourses + inProgressCourses;
+    const remainingCoursesAfterCurrentTerm = Math.max(0, totalRequiredCourses - currentProgress);
+    const remainingCourses = Math.max(0, totalRequiredCourses - completedCourses);
+    
+    // Get current date (Ontario timezone)
+    const currentDate = getCurrentDateET();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
+    
+    // Determine current term based on month
+    let currentTerm = "";
+    if (currentMonth >= 9 && currentMonth <= 12) {
+      currentTerm = "Fall"; // Sept-Dec
+    } else if (currentMonth >= 1 && currentMonth <= 4) {
+      currentTerm = "Winter"; // Jan-Apr
     } else {
-      // If currently in Spring, graduate in Fall
-      graduationTerm = "Fall";
-      graduationMonth = 8; // September
-    }
-  } else {
-    // Calculate terms needed to complete remaining courses
-    // Each term can handle 5 courses, but only count Fall and Winter terms
-    const termsNeeded = Math.ceil(remainingCourses / coursesPerTerm);
-    
-    // We need to advance by the required number of terms, but only counting Fall and Winter
-    let termCount = 0;
-    let monthCount = 0;
-    let yearCount = 0;
-    
-    // Initial month and year
-    let month = currentMonth;
-    let year = currentYear;
-    
-    // If we're in Spring term, move to Fall since we don't count Spring courses
-    if (isSpringTerm) {
-      month = 8; // September (start of Fall)
+      currentTerm = "Spring/Summer"; // May-Aug
     }
     
-    while (termCount < termsNeeded) {
-      // Move to next month
-      month++;
-      monthCount++;
+    // Find the highest year in program requirements
+    let maxYear = 0;
+    let finalYearCourseCount = 0;
+    let finalYearFallCourseCount = 0;
+    let finalYearWinterCourseCount = 0;
+    
+    // Count courses in each term of the final year
+    if (programCourses && programCourses.length > 0) {
+      // Find highest year in program
+      maxYear = Math.max(...programCourses.map(course => course.year || 0));
       
-      // Handle year rollover
-      if (month > 11) {
-        month = 0;
-        year++;
-        yearCount++;
-      }
+      // Count courses in final year
+      finalYearCourseCount = programCourses.filter(course => course.year === maxYear).length;
       
-      // Only count Fall and Winter terms
-      if ((month == 8) || (month == 0)) { // September or January
-        termCount++;
-      }
+      // Count courses in final year by term
+      finalYearFallCourseCount = programCourses.filter(
+        course => course.year === maxYear && course.term === "Fall"
+      ).length;
+      
+      finalYearWinterCourseCount = programCourses.filter(
+        course => course.year === maxYear && course.term === "Winter"
+      ).length;
     }
     
-    // Determine final graduation term
-    if (month >= 0 && month <= 3) {
-      graduationTerm = "Winter";
-      graduationMonth = 0; // January
-    } else if (month >= 4 && month <= 7) {
-      graduationTerm = "Spring";
-      graduationMonth = 4; // May
+    // Check if full year is needed for final year
+    const needsFinalWinterTerm = finalYearCourseCount > 5 || finalYearWinterCourseCount > 0;
+    
+    // Calculate terms needed to complete degree
+    const termsNeeded = Math.ceil(remainingCoursesAfterCurrentTerm / coursesPerTerm);
+    
+    // Calculate graduation date
+    let graduationYear = currentYear;
+    let graduationTerm = currentTerm;
+    let graduationMonth = 0;
+    
+    // Function to advance term
+    const advanceTerm = (term: string, year: number) => {
+      if (term === "Fall") {
+        return { term: "Winter", year: year + 1 };
+      } else if (term === "Winter") {
+        return { term: "Fall", year: year };
+      } else { // Spring/Summer
+        return { term: "Fall", year: year };
+      }
+    };
+    
+    // If we have in-progress courses, we're in the current term
+    if (inProgressCourses > 0) {
+      // Start from current term
     } else {
-      graduationTerm = "Fall";
-      graduationMonth = 8; // September
+      // Start from next term
+      const next = advanceTerm(currentTerm, graduationYear);
+      graduationTerm = next.term;
+      graduationYear = next.year;
     }
     
-    graduationYear = year;
-  }
-  
-  // Determine convocation ceremony (Spring or Fall) based on course completion term
-  let ceremonyTerm = "";
-  let ceremonyYear = graduationYear;
-  
-  // Map academic term to convocation ceremony
-  if (graduationTerm === "Winter" || graduationTerm === "Spring") {
-    // Winter term (Jan-Apr) and Spring term (May-Aug) completions attend Spring convocation
-    ceremonyTerm = "Spring";
-    // Ceremony is in the same year courses are completed
-  } else {
-    // Fall term (Sept-Dec) completions attend Fall convocation
-    ceremonyTerm = "Fall";
-    // Ceremony is in the same year courses are completed
-  }
-  
-  // Only use ceremony term and year for display
-  const ceremonyDisplay = `${ceremonyTerm} ${ceremonyYear}`;
-  
-  // Prepare graduation projection data to pass to GradesList
-  const graduationProjection = {
-    projectedDate: "", // Empty string to satisfy TypeScript
-    termDisplay: ceremonyDisplay,
-    coursesPerTerm,
-    remainingCourses,
-    totalRequiredCourses,
-    isCeremony: true // Flag to indicate this is a ceremony projection
+    // Advance terms based on number of terms needed
+    for (let i = 0; i < termsNeeded; i++) {
+      const next = advanceTerm(graduationTerm, graduationYear);
+      graduationTerm = next.term;
+      graduationYear = next.year;
+    }
+    
+    // Adjust for final year structure if needed
+    if (graduationTerm === "Fall" && needsFinalWinterTerm) {
+      graduationTerm = "Winter";
+      graduationYear = graduationYear + 1;
+    }
+    
+    // Set graduation month based on term
+    if (graduationTerm === "Fall") {
+      graduationMonth = 12; // December
+    } else if (graduationTerm === "Winter") {
+      graduationMonth = 4; // April
+    }
+    
+    // Calculate convocation ceremony date
+    // Spring convocation is in June, Fall convocation is in October
+    let convocationTerm: string;
+    let convocationYear = graduationYear;
+    
+    if (graduationMonth === 12) { // December graduation
+      convocationTerm = "Spring";
+      convocationYear = graduationYear + 1;
+    } else if (graduationMonth === 4) { // April graduation
+      convocationTerm = "Spring";
+    } else {
+      convocationTerm = "Fall";
+    }
+    
+    const graduationDate = new Date(graduationYear, graduationMonth - 1, 15);
+    const formattedGraduationDate = formatDate(graduationDate);
+    
+    // Format display strings
+    let studiesCompletionDisplay = "";
+    if (graduationTerm === "Fall") {
+      studiesCompletionDisplay = `December ${graduationYear}`;
+    } else if (graduationTerm === "Winter") {
+      studiesCompletionDisplay = `April ${graduationYear}`;
+    }
+    
+    let convocationDisplay = "";
+    if (convocationTerm === "Spring") {
+      convocationDisplay = `June ${convocationYear}`;
+    } else {
+      convocationDisplay = `October ${convocationYear}`;
+    }
+    
+    return {
+      projectedDate: formattedGraduationDate,
+      termDisplay: convocationDisplay, // Keep for backward compatibility - this will be the convocation date
+      studiesEndDate: studiesCompletionDisplay, // When studies will finish (April/December)
+      convocationDate: convocationDisplay, // When convocation will occur (June/October)
+      coursesPerTerm: coursesPerTerm,
+      remainingCourses: remainingCourses,
+      totalRequiredCourses: totalRequiredCourses,
+      isCeremony: true
+    };
   };
+
+  // Calculate graduation projection
+  const graduationProjection = calculateGraduationProjection();
 
   return (
     <main className="bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 min-h-screen py-6">

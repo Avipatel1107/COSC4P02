@@ -30,6 +30,8 @@ interface GradesListProps {
   graduationProjection?: {
     projectedDate?: string;
     termDisplay: string;
+    studiesEndDate?: string;
+    convocationDate?: string;
     coursesPerTerm: number;
     remainingCourses: number;
     totalRequiredCourses: number;
@@ -437,11 +439,13 @@ export default function GradesList({ grades, decryptedGrades, graduationProjecti
                 <h4 className="text-lg font-medium text-indigo-800 dark:text-indigo-200">
                   Projected Graduation
                 </h4>
+                {graduationProjection.studiesEndDate && (
+                  <p className="text-sm text-indigo-700 dark:text-indigo-300 mb-1">
+                    <span className="font-medium">Studies completion:</span> {graduationProjection.studiesEndDate}
+                  </p>
+                )}
                 <p className="text-sm text-indigo-700 dark:text-indigo-300">
-                  {graduationProjection.isCeremony 
-                    ? `Your projected graduation ceremony will be the ${graduationProjection.termDisplay} convocation.`
-                    : `Based on your current progress, you are projected to graduate in ${graduationProjection.termDisplay}.`
-                  }
+                  <span className="font-medium">Convocation ceremony:</span> {graduationProjection.convocationDate || graduationProjection.termDisplay}
                 </p>
                 <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
                   Estimation based on {graduationProjection.coursesPerTerm} courses per term with {graduationProjection.remainingCourses} courses remaining.
