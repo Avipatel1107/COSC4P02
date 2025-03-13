@@ -213,6 +213,15 @@ export function PageTransition({ children }: PageTransitionProps) {
       return;
     }
 
+    // Skip transition for auth-related paths to prevent state conflicts
+    const authPaths = ['/sign-in', '/sign-up', '/sign-out', '/forgot-password'];
+    if (authPaths.includes(pathname || '') || authPaths.includes(prevPathRef.current || '')) {
+      setDisplayChildren(children);
+      setTransitionKey(pathname || "");
+      prevPathRef.current = pathname;
+      return;
+    }
+
     // Phase 1: Start transition - capture old content and show overlay
     setTransitionPhase('start');
     setIsTransitioning(true);
