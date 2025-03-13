@@ -106,22 +106,31 @@ export default function Navbar() {
     try {
       // Set signing out state to prevent route-based auth detection
       setIsSigningOut(true);
-      // Immediately clear user state to update UI
-      setUser(null);
       
-      // Then perform the actual sign-out operations
+      // First perform the actual sign-out operations
       await signOutAction();
       
       // Client-side signout
       const supabase = getSupabase();
       await supabase.auth.signOut();
       
+      // Only after successful sign-out, update the UI state
+      setUser(null);
+      
       // Clear any cached auth state
-      localStorage.removeItem('supabase.auth.token');
+      try {
+        localStorage.removeItem('supabase.auth.token');
+      } catch (e) {
+        console.error('Error clearing local storage:', e);
+      }
       
       // Navigate after sign-out completed
       router.push('/sign-in');
-      router.refresh();
+      
+      // Use setTimeout to ensure navigation completes before refresh
+      setTimeout(() => {
+        router.refresh();
+      }, 100);
     } catch (error) {
       console.error('Error signing out:', error);
       // Reset signing out state if there was an error
