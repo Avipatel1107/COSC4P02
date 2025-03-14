@@ -13,6 +13,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isReviewsDropdownOpen, setIsReviewsDropdownOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -101,6 +102,7 @@ export default function Navbar() {
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
+  const toggleReviewsDropdown = () => setIsReviewsDropdownOpen(!isReviewsDropdownOpen);
 
   const handleSignOut = async () => {
     try {
@@ -200,17 +202,43 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
+                <div className="relative dropdown-container">
+                  <button
+                    onClick={toggleReviewsDropdown}
+                    className="flex items-center text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 px-4 py-1 gap-1"
+                  >
+                    Reviews and Discussion
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform ${
+                        isReviewsDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {isReviewsDropdownOpen && (
+                    <div className="absolute bg-white dark:bg-gray-800 shadow-md dark:shadow-gray-900 rounded mt-2 w-48 py-1 z-50">
+                      <Link
+                        href="/protected/course-discussions"
+                        className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                        onClick={() => setIsReviewsDropdownOpen(false)}
+                      >
+                        Discussions
+                      </Link>
+                      <Link
+                        href="/protected/course-reviews"
+                        className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                        onClick={() => setIsReviewsDropdownOpen(false)}
+                      >
+                        Reviews
+                      </Link>
+                    </div>
+                  )}
+                </div>
                 <Link
                   href="/protected/academic-progress"
                   className="text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 px-4 py-1"
                 >
                   Academic Progress
-                </Link>
-                <Link
-                  href="/protected/course-reviews"
-                  className="text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 px-4 py-1"
-                >
-                  Course Reviews
                 </Link>
                 <Link
                   href="/protected/profile"
@@ -305,19 +333,50 @@ export default function Navbar() {
                       </div>
                     )}
                   </div>
+                  <div className="relative dropdown-container">
+                    <button
+                      onClick={toggleReviewsDropdown}
+                      className="flex items-center text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 px-2 py-1 gap-1 w-full text-left"
+                    >
+                      Course Reviews
+                      <ChevronDown
+                        size={16}
+                        className={`transition-transform ${
+                          isReviewsDropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                    {isReviewsDropdownOpen && (
+                      <div className="relative bg-white dark:bg-gray-800 shadow-md dark:shadow-gray-900 rounded mt-2 w-48 py-1">
+                        <Link
+                          href="/protected/discussions"
+                          className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                          onClick={() => {
+                            setIsReviewsDropdownOpen(false);
+                            setIsMenuOpen(false);
+                          }}
+                        >
+                          Discussions
+                        </Link>
+                        <Link
+                          href="/protected/review-form"
+                          className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                          onClick={() => {
+                            setIsReviewsDropdownOpen(false);
+                            setIsMenuOpen(false);
+                          }}
+                        >
+                          ReviewForm
+                        </Link>
+                      </div>
+                    )}
+                  </div>
                   <Link
                     href="/protected/academic-progress"
                     className="text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 px-2 py-1"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Academic Progress
-                  </Link>
-                  <Link
-                    href="/protected/course-reviews"
-                    className="text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 px-2 py-1"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Course Reviews
                   </Link>
                   <Link
                     href="/protected/profile"
