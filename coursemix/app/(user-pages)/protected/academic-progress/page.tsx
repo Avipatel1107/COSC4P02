@@ -86,6 +86,14 @@ export default async function GradesPage() {
     }
   }
 
+  // Get enrolled courses
+  const { data: enrollments } = await supabase
+    .from("enrollments")
+    .select("*, courses!inner(course_code)")
+    .eq("user_id", user.id);
+  
+  //console.log(enrollments);
+
   if (grades) {
     // Keep track of any grades that need to be updated
     const gradesToUpdate: string[] = [];
@@ -163,46 +171,19 @@ export default async function GradesPage() {
   // grades?.forEach(grade => {
   //   console.log(`${grade.course_code}: DB value = ${grade.grade}, Decrypted = ${decryptedGrades[grade.id]}, Status = ${grade.status}`);
   // });
-  
-  // Get user's program
-  const { data: programData } = await supabase
-    .from("user_profiles")
-    .select("program_id")
-    .eq("user_id", user.id)
-    .single();
 
-  const hasProgram = programData && programData.program_id;
-  let programCourses = [];
-  let isCoopProgram = false;
-  let programInfo = null;
+  // Match registered courses to program requirements
+  let course_code = "";
 
-  // Get program information and requirements
-  if (hasProgram) {
-    // Get program information
-    const { data: program, error: programError } = await supabase
-      .from("programs")
-      .select("*")
-      .eq("id", programData.program_id)
-      .single();
-    
-    if (programError) {
-      console.error("Error fetching program info:", programError);
-    } else {
-      programInfo = program;
-      // Check if this is a co-op program
-      isCoopProgram = program?.coop_program || false;
-    }
+  for (let program_course of programCourses) {
+    let course_code = program_course.course_code.replace(/\s/g, "");
+    let match_enrolled = enrollments?.filter(enrollment =>
+      enrollment.courses.course_code.search(new RegExp(".*" + course_code + ".*")) !== -1
+      && enrollment.status === "enrolled"
+    );
 
-    // Get program requirements
-    const { data: courses, error: coursesError } = await supabase
-      .from("program_requirements")
-      .select("*")
-      .eq("program_id", programData.program_id);
-    
-    if (coursesError) {
-      console.error("Error fetching program courses:", coursesError);
-    } else {
-      programCourses = courses || [];
+    if (match_enrolled && match_enrolled.length > 0) {
+      console.log(match_enrolled);
     }
   }
 
