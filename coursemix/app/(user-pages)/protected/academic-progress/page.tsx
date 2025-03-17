@@ -187,7 +187,15 @@ export default async function GradesPage() {
             req_code: program_course.course_code,
             req_id: program_course.id
           });
+
+          // TODO: Make this functionality evident to the user.
+          // May be mistaken for a bug if the user attempts to delete the auto assigned grade.
         }
+
+        // TODO: What if multiple enrolled courses match? Maybe dropdown?
+
+        // TODO: Dropdown for electives or "cluster credits"
+        // that are not explicitly marked with the course code.
       }
     }
 
