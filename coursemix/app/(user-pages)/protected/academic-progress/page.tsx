@@ -164,6 +164,50 @@ export default async function GradesPage() {
         });
       }
     }
+
+    // Match registered courses to program requirements
+    let to_in_progress = []; 
+    for (let program_course of programCourses) {
+      let course_code = program_course.course_code.replace(/\s/g, "");
+      let match_enrolled = enrollments?.filter(enrollment =>
+        enrollment.courses.course_code.search(new RegExp(".*" + course_code + ".*")) !== -1
+        && enrollment.status === "enrolled"
+      );
+
+      if (match_enrolled && match_enrolled.length > 0) {
+        //console.log(match_enrolled);
+
+        if (match_enrolled.length === 1
+          && grades.filter(grade => {
+            grade.user_id === user.id
+            && grade.course_code === program_course.course_code
+          }).length === 0) {
+          // Single course: match immediately
+          to_in_progress.push({
+            req_code: program_course.course_code,
+            req_id: program_course.id
+          });
+        }
+      }
+    }
+
+    if (to_in_progress.length > 0) {
+      //console.log(to_in_progress);
+
+      for (let course of to_in_progress) {
+        await supabase
+          .from("student_grades")
+          .insert({
+            user_id: user.id,
+            course_code: course.req_code,
+            grade: null,
+            year: new Date().getFullYear(),
+            term: "Current",
+            status: "in-progress",
+            requirement_id: course.req_id
+          });
+      }
+    }
   }
   
   // Debug output all grades and their decrypted values
@@ -171,21 +215,6 @@ export default async function GradesPage() {
   // grades?.forEach(grade => {
   //   console.log(`${grade.course_code}: DB value = ${grade.grade}, Decrypted = ${decryptedGrades[grade.id]}, Status = ${grade.status}`);
   // });
-
-  // Match registered courses to program requirements
-  let course_code = "";
-
-  for (let program_course of programCourses) {
-    let course_code = program_course.course_code.replace(/\s/g, "");
-    let match_enrolled = enrollments?.filter(enrollment =>
-      enrollment.courses.course_code.search(new RegExp(".*" + course_code + ".*")) !== -1
-      && enrollment.status === "enrolled"
-    );
-
-    if (match_enrolled && match_enrolled.length > 0) {
-      console.log(match_enrolled);
-    }
-  }
 
   // Fetch work terms if this is a co-op program
   let workTerms = [];
