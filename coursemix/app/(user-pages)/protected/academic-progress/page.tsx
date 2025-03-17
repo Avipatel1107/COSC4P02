@@ -30,20 +30,62 @@ export default async function GradesPage() {
   }
   
   // Fetch the user's grades
-  const { data: grades, error } = await supabase
+  const { data: grades, error: gradesError } = await supabase
     .from("student_grades")
     .select("*")
     .eq("user_id", user.id)
     .order("year", { ascending: false })
     .order("term", { ascending: true });
   
-  if (error) {
+  if (gradesError) {
     // console.error("Error fetching grades:", error);
   }
   
   // Decrypt grades for display
   const decryptedGrades: { [id: string]: string } = {};
-  
+
+  // Get user's program
+  const { data: programData } = await supabase
+    .from("user_profiles")
+    .select("program_id")
+    .eq("user_id", user.id)
+    .single();
+
+  const hasProgram = programData && programData.program_id;
+  let programCourses = [];
+  let isCoopProgram = false;
+  let programInfo = null;
+
+  // Get program information and requirements
+  if (hasProgram) {
+    // Get program information
+    const { data: program, error: programError } = await supabase
+      .from("programs")
+      .select("*")
+      .eq("id", programData.program_id)
+      .single();
+    
+    if (programError) {
+      console.error("Error fetching program info:", programError);
+    } else {
+      programInfo = program;
+      // Check if this is a co-op program
+      isCoopProgram = program?.coop_program || false;
+    }
+
+    // Get program requirements
+    const { data: courses, error: coursesError } = await supabase
+      .from("program_requirements")
+      .select("*")
+      .eq("program_id", programData.program_id);
+    
+    if (coursesError) {
+      console.error("Error fetching program courses:", coursesError);
+    } else {
+      programCourses = courses || [];
+    }
+  }
+
   if (grades) {
     // Keep track of any grades that need to be updated
     const gradesToUpdate: string[] = [];
