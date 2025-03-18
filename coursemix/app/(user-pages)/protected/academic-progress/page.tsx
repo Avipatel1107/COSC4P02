@@ -178,10 +178,10 @@ export default async function GradesPage() {
         //console.log(match_enrolled);
 
         if (match_enrolled.length === 1
-          && grades.filter(grade => {
+          && grades.filter(grade => 
             grade.user_id === user.id
             && grade.course_code === program_course.course_code
-          }).length === 0) {
+          ).length === 0) {
           // Single course: match immediately
           to_in_progress.push({
             req_code: program_course.course_code,
