@@ -461,6 +461,7 @@ export default async function GradesPage() {
                 userId={user.id}
                 isCoopProgram={isCoopProgram}
                 workTerms={workTerms}
+                registered={enrollments || []}
               />
             </div>
           ) : (
