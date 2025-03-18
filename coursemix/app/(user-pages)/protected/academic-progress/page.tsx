@@ -187,9 +187,6 @@ export default async function GradesPage() {
             req_code: program_course.course_code,
             req_id: program_course.id
           });
-
-          // TODO: Make this functionality evident to the user.
-          // May be mistaken for a bug if the user attempts to delete the auto assigned grade.
         }
 
         // TODO: What if multiple enrolled courses match? Maybe dropdown?
@@ -450,7 +447,9 @@ export default async function GradesPage() {
                   </svg>
                 </div>
                 <div className="text-blue-700 dark:text-blue-300">
-                  <span className="font-medium">Pro Tip:</span> Click the <span className="inline-flex items-center justify-center bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-full h-4 w-4 text-xs mx-0.5">+</span> icon on any course to mark it as "in progress". This helps you track courses you're currently taking before entering final grades.
+                  <span className="font-medium">Pro Tip:</span><br />
+                  Click the <span className="inline-flex items-center justify-center bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-full h-4 w-4 text-xs mx-0.5">+</span> icon on a course to mark it as "in progress". This helps you track courses you're currently taking before entering final grades.<br />
+                  Courses you are <Link className="underline" href="/protected/my-courses">currently registered for</Link> are automatically marked as "in progress" by course code.
                 </div>
               </div>
               

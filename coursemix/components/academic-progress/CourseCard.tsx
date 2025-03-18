@@ -234,6 +234,9 @@ export default function CourseCard({
           <div>
             <div className="flex items-center gap-1 mb-1">
               <h3 className="font-bold text-gray-800 dark:text-gray-100">{courseCode}</h3>
+              {registered && (
+                <span className="text-xs text-gray-600 dark:text-gray-300">Registered</span>
+              )}
               {!registered && !isInProgress && !hasGrade && (
                 <Button
                   variant="ghost"
