@@ -88,22 +88,28 @@ export default function CourseSuggestions({ userId }: CourseSuggestionsProps) {
           return;
         }
         
-        // Create sets of completed and in-progress course codes for easy lookup
+        // Create sets of completed requirement IDs and course codes for prerequisite checking
+        const completedRequirementIds = new Set<string>();
         const completedCourses = new Set<string>();
         const inProgressCourses = new Set<string>();
         
         (studentGrades || []).forEach(grade => {
           if (grade.status === 'completed') {
+            // Track both the completed requirement ID and course code
+            if (grade.requirement_id) {
+              completedRequirementIds.add(grade.requirement_id);
+            }
             completedCourses.add(grade.course_code);
           } else if (grade.status === 'in-progress') {
             inProgressCourses.add(grade.course_code);
           }
         });
         
-        // Step 4: Find courses that need to be taken (not completed and not in progress)
+        // Step 4: Find courses that need to be taken (specific requirement not completed and not in progress)
         const requiredCourses = programRequirements.filter(requirement => {
+          // For requirements with specific IDs, check if that exact requirement ID has been completed
           return !(
-            completedCourses.has(requirement.course_code) || 
+            completedRequirementIds.has(requirement.id) || 
             inProgressCourses.has(requirement.course_code)
           );
         });
