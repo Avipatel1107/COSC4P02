@@ -38,7 +38,7 @@ export default function HomePage() {
             <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
               Revolutionizing academic advising and empowering students through personalized, data-driven solutions.
             </p>
-            <Link href="/register">
+            <Link href="/sign-up">
               <button className="bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white font-medium py-4 px-8 rounded-md text-lg transition-all duration-200 shadow-md hover:shadow-lg">
                 Get Started
               </button>
@@ -55,13 +55,13 @@ export default function HomePage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 px-4 sm:px-6">
             {features.map((feature, index) => (
-              <Link href="/protected/dashboard" key={index}>
-                <div className="bg-gray-50 dark:bg-gray-700 p-8 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-teal-500/30 dark:hover:border-teal-400/30 transition-all duration-200 hover:shadow-md group">
+              <Link href="/protected/dashboard" key={index} className="h-full">
+                <div className="bg-gray-50 dark:bg-gray-700 p-8 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-teal-500/30 dark:hover:border-teal-400/30 transition-all duration-200 hover:shadow-md group h-full flex flex-col">
                   <span className="text-4xl mb-4 block">{feature.icon}</span>
                   <h3 className="text-xl font-semibold mb-3 text-gray-800 dark:text-gray-100 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
                     {feature.title}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300">{feature.description}</p>
+                  <p className="text-gray-600 dark:text-gray-300 flex-grow">{feature.description}</p>
                 </div>
               </Link>
             ))}
@@ -93,7 +93,7 @@ export default function HomePage() {
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-10">
             Join Course Mix today and revolutionize your academic experience.
           </p>
-          <Link href="/register">
+          <Link href="/sign-up">
             <button className="bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white font-medium py-4 px-8 rounded-md text-lg transition-all duration-200 shadow-md hover:shadow-lg">
               Start Planning Now
             </button>
