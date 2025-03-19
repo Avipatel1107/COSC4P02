@@ -38,7 +38,7 @@ export default function HomePage() {
             <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
               Revolutionizing academic advising and empowering students through personalized, data-driven solutions.
             </p>
-            <Link href="/register">
+            <Link href="/sign-up">
               <button className="bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white font-medium py-4 px-8 rounded-md text-lg transition-all duration-200 shadow-md hover:shadow-lg">
                 Get Started
               </button>
@@ -93,7 +93,7 @@ export default function HomePage() {
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-10">
             Join Course Mix today and revolutionize your academic experience.
           </p>
-          <Link href="/register">
+          <Link href="/sign-up">
             <button className="bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white font-medium py-4 px-8 rounded-md text-lg transition-all duration-200 shadow-md hover:shadow-lg">
               Start Planning Now
             </button>
