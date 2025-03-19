@@ -55,13 +55,13 @@ export default function HomePage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 px-4 sm:px-6">
             {features.map((feature, index) => (
-              <Link href="/protected/dashboard" key={index}>
-                <div className="bg-gray-50 dark:bg-gray-700 p-8 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-teal-500/30 dark:hover:border-teal-400/30 transition-all duration-200 hover:shadow-md group">
+              <Link href="/protected/dashboard" key={index} className="h-full">
+                <div className="bg-gray-50 dark:bg-gray-700 p-8 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-teal-500/30 dark:hover:border-teal-400/30 transition-all duration-200 hover:shadow-md group h-full flex flex-col">
                   <span className="text-4xl mb-4 block">{feature.icon}</span>
                   <h3 className="text-xl font-semibold mb-3 text-gray-800 dark:text-gray-100 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
                     {feature.title}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300">{feature.description}</p>
+                  <p className="text-gray-600 dark:text-gray-300 flex-grow">{feature.description}</p>
                 </div>
               </Link>
             ))}
