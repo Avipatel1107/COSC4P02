@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentTerm, getCurrentDateET } from "@/utils/date-utils";
 import { TermInfo } from "@/types";
 import CourseSearch from "@/components/course-registration/CourseSearch";
+import CourseSuggestions from "@/components/course-registration/CourseSuggestions";
 
 export default async function CourseRegistrationPage() {
   const supabase = await createClient();
@@ -49,6 +50,10 @@ export default async function CourseRegistrationPage() {
           <p className="text-gray-600 dark:text-gray-300 mt-2">
             Register for courses for the {displayTerm} term
           </p>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 mb-6">
+          <CourseSuggestions userId={user.id} />
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
