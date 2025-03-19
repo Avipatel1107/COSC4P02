@@ -853,6 +853,30 @@ export default function CourseSearch({ userId, term, year }: CourseSearchProps) 
     return formatDate(dateStr);
   };
 
+  // Add an effect to listen for the custom suggestion event
+  useEffect(() => {
+    // Function to handle the suggestion selected event
+    const handleSuggestionSelected = (event: CustomEvent) => {
+      const { courseCode } = event.detail;
+      
+      // Update the search query state
+      setSearchQuery(courseCode);
+      setSelectedSubject(null);
+      
+      // Cancel any pending debounced searches and perform an immediate search
+      debouncedSearch.cancel();
+      searchCourses(courseCode, null, selectedDuration);
+    };
+
+    // Add event listener for the custom event
+    document.addEventListener('suggestionSelected', handleSuggestionSelected as EventListener);
+    
+    // Cleanup - remove event listener when component unmounts
+    return () => {
+      document.removeEventListener('suggestionSelected', handleSuggestionSelected as EventListener);
+    };
+  }, [debouncedSearch, selectedDuration]); // Include dependencies
+
   return (
     <div className="space-y-6">
       <div>
