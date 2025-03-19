@@ -228,49 +228,19 @@ export default function CourseSuggestions({ userId }: CourseSuggestionsProps) {
               <button
                 className="w-full mt-1 py-1.5 px-3 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800"
                 onClick={() => {
-                  // Find the search input by its type and placeholder
-                  const searchInputs = document.querySelectorAll('input[type="text"]');
-                  let searchInput = null;
+                  // Create and dispatch a custom event that the CourseSearch component can listen for
+                  const event = new CustomEvent('suggestionSelected', {
+                    bubbles: true,
+                    detail: { courseCode: course.course_code }
+                  });
                   
-                  // Loop through all text inputs to find the right one
-                  for (let i = 0; i < searchInputs.length; i++) {
-                    const input = searchInputs[i] as HTMLInputElement;
-                    if (input.placeholder && input.placeholder.includes('course code')) {
-                      searchInput = input;
-                      break;
-                    }
-                  }
+                  // Dispatch the event at the document level so it can be caught anywhere
+                  document.dispatchEvent(event);
                   
-                  if (searchInput) {
-                    // Scroll to and focus the search input
-                    searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    searchInput.focus();
-                    
-                    // Clear the input first
-                    searchInput.value = '';
-                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    
-                    // Better simulate user typing by setting the text character by character
-                    const courseCode = course.course_code;
-                    let currentIndex = 0;
-                    
-                    // Function to add the next character
-                    const typeNextCharacter = () => {
-                      if (currentIndex < courseCode.length) {
-                        // Add the next character
-                        searchInput.value += courseCode[currentIndex];
-                        
-                        // Dispatch input event
-                        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        
-                        // Increment index and schedule next character
-                        currentIndex++;
-                        setTimeout(typeNextCharacter, 50);
-                      }
-                    };
-                    
-                    // Start the typing simulation after a small delay
-                    setTimeout(typeNextCharacter, 100);
+                  // Find the search section and scroll to it
+                  const searchSection = document.querySelector('.bg-white.dark\\:bg-gray-800.rounded-lg.shadow-md.p-6:not(:first-child)');
+                  if (searchSection) {
+                    searchSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }
                 }}
               >
