@@ -52,6 +52,7 @@ export default function CourseSuggestions({ userId }: CourseSuggestionsProps) {
   const [suggestedCourses, setSuggestedCourses] = useState<SuggestedCourse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [electiveSuggestionsAvailable, setElectiveSuggestionsAvailable] = useState(false);
+  const [electiveSuggestions, setElectiveSuggestions] = useState<ElectiveSuggestion[]>([]);
   const supabase = createClient();
 
   useEffect(() => {
@@ -100,13 +101,13 @@ export default function CourseSuggestions({ userId }: CourseSuggestionsProps) {
         console.log('Attempting to fetch from elective_suggestions table...');
         
         // Try with public schema explicitly
-        const { data: electiveSuggestions, error: electiveError } = await supabase
+        const { data: fetchedElectiveSuggestions, error: electiveError } = await supabase
           .from('elective_suggestions')
           .select('id, course_code, created_at');
           
         // Log detailed information about the query result
         console.log('Elective suggestions query result:', { 
-          data: electiveSuggestions, 
+          data: fetchedElectiveSuggestions, 
           error: electiveError,
           errorMessage: electiveError?.message,
           errorDetails: electiveError?.details,
@@ -115,7 +116,7 @@ export default function CourseSuggestions({ userId }: CourseSuggestionsProps) {
         // Hard-code suggestions if table query fails
         let suggestionsToUse: ElectiveSuggestion[] = [];
         
-        if (electiveError || !electiveSuggestions || electiveSuggestions.length === 0) {
+        if (electiveError || !fetchedElectiveSuggestions || fetchedElectiveSuggestions.length === 0) {
           console.warn('Could not fetch from database, using hardcoded elective suggestions');
           // Use hardcoded suggestions as fallback
           suggestionsToUse = [
@@ -132,11 +133,12 @@ export default function CourseSuggestions({ userId }: CourseSuggestionsProps) {
             { id: '11', course_code: 'ASTR 1P02', created_at: new Date().toISOString() },
           ];
         } else {
-          suggestionsToUse = electiveSuggestions;
+          suggestionsToUse = fetchedElectiveSuggestions;
         }
           
         const hasElectiveSuggestions = suggestionsToUse.length > 0;
         setElectiveSuggestionsAvailable(hasElectiveSuggestions);
+        setElectiveSuggestions(suggestionsToUse);
         
         if (hasElectiveSuggestions) {
           console.log('Elective suggestions available:', suggestionsToUse.length);
@@ -251,6 +253,26 @@ export default function CourseSuggestions({ userId }: CourseSuggestionsProps) {
     fetchSuggestions();
   }, [userId, supabase]);
 
+  // Function to swap an elective suggestion with a new random one
+  const getNewElectiveSuggestion = (courseId: string) => {
+    if (electiveSuggestions.length === 0) return;
+    
+    setSuggestedCourses(currentCourses => {
+      return currentCourses.map(course => {
+        if (course.id === courseId && course.course_code.toUpperCase() === 'ELECTIVE') {
+          const randomIndex = Math.floor(Math.random() * electiveSuggestions.length);
+          const newSuggestion = electiveSuggestions[randomIndex].course_code;
+          console.log(`Swapped elective suggestion for ${courseId} to ${newSuggestion}`);
+          return {
+            ...course,
+            display_code: newSuggestion
+          };
+        }
+        return course;
+      });
+    });
+  };
+
   if (loading) {
     return (
       <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -305,9 +327,20 @@ export default function CourseSuggestions({ userId }: CourseSuggestionsProps) {
                 <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">(Elective)</span>
               )}
             </h3>
-            <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+            <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 space-y-2">
+              {course.course_code.toUpperCase() === 'ELECTIVE' && (
+                <button
+                  className="w-full py-1.5 px-3 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-1 dark:focus:ring-offset-gray-800 flex items-center justify-center"
+                  onClick={() => getNewElectiveSuggestion(course.id)}
+                >
+                  <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                  </svg>
+                  Try Another Elective
+                </button>
+              )}
               <button
-                className="w-full mt-1 py-1.5 px-3 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800"
+                className="w-full py-1.5 px-3 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800"
                 onClick={() => {
                   // Create and dispatch a custom event that the CourseSearch component can listen for
                   const event = new CustomEvent('suggestionSelected', {
