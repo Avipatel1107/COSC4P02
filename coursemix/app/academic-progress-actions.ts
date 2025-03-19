@@ -1,9 +1,94 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { encryptGrade } from "@/utils/grade-utils";
+import { encryptGrade, decryptGrade } from "@/utils/grade-utils";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+/**
+ * Checks if a course has prerequisites and if those prerequisites are met
+ * @param courseCode The course code to check prerequisites for
+ * @param userId The user ID to check grades for
+ * @returns An object with success boolean and message/error
+ */
+async function checkPrerequisites(courseCode: string, userId: string) {
+  const supabase = await createClient();
+  
+  try {
+    // Check if the course has prerequisites
+    const { data: prerequisites, error: prereqError } = await supabase
+      .from("course_prerequisites")
+      .select("*")
+      .eq("course_code", courseCode);
+    
+    if (prereqError) {
+      console.error("Error checking prerequisites:", prereqError);
+      return { success: false, error: "Failed to check course prerequisites" };
+    }
+    
+    // If no prerequisites are found, return success
+    if (!prerequisites || prerequisites.length === 0) {
+      return { success: true };
+    }
+    
+    // Check if all prerequisites are met
+    for (const prereq of prerequisites) {
+      // Get the user's grade for the prerequisite course
+      const { data: gradeData, error: gradeError } = await supabase
+        .from("student_grades")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("course_code", prereq.prerequisite_code)
+        .eq("status", "completed") // Only consider completed courses
+        .single();
+      
+      if (gradeError && gradeError.code !== 'PGRST116') { // PGRST116 = not found
+        console.error(`Error checking grade for prerequisite ${prereq.prerequisite_code}:`, gradeError);
+        return { success: false, error: `Failed to check grade for prerequisite ${prereq.prerequisite_code}` };
+      }
+      
+      // If the prerequisite course doesn't have a grade, it's not completed
+      if (!gradeData) {
+        return {
+          success: false,
+          error: `Missing prerequisite: ${prereq.prerequisite_code} must be completed before adding a grade for ${courseCode}`
+        };
+      }
+      
+      // If there's a minimum grade requirement, check it
+      if (prereq.min_grade !== null) {
+        try {
+          let userGrade: number;
+          
+          // Decrypt the grade if it's encrypted
+          if (gradeData.grade && typeof gradeData.grade === 'string' && gradeData.grade.includes(':')) {
+            const decryptedGrade = decryptGrade(gradeData.grade, userId);
+            userGrade = parseFloat(decryptedGrade);
+          } else {
+            userGrade = parseFloat(gradeData.grade);
+          }
+          
+          // Check if the grade meets the minimum requirement
+          if (isNaN(userGrade) || userGrade < prereq.min_grade) {
+            return {
+              success: false,
+              error: `Grade requirement not met: ${prereq.prerequisite_code} requires a minimum grade of ${prereq.min_grade}`
+            };
+          }
+        } catch (decryptError) {
+          console.error(`Error decrypting grade for prerequisite ${prereq.prerequisite_code}:`, decryptError);
+          return { success: false, error: `Failed to verify grade for prerequisite ${prereq.prerequisite_code}` };
+        }
+      }
+    }
+    
+    // All prerequisites are met
+    return { success: true };
+  } catch (error) {
+    console.error("Error in checkPrerequisites:", error);
+    return { success: false, error: "Failed to check prerequisites" };
+  }
+}
 
 /**
  * Adds a new grade record to the database
@@ -28,6 +113,12 @@ export async function addGradeAction(formData: FormData) {
   // Validate form inputs
   if (!courseCode || !grade || !term || isNaN(year)) {
     return { error: "Course code, grade, term, and year are required" };
+  }
+  
+  // Check prerequisites before adding a grade
+  const prerequisiteCheck = await checkPrerequisites(courseCode, user.id);
+  if (!prerequisiteCheck.success) {
+    return { error: prerequisiteCheck.error };
   }
   
   // Automatically set status to "completed" when a grade is provided
@@ -256,7 +347,6 @@ export async function deleteGradeAction(formData: FormData) {
 }
 
 /**
- * Saves a grade for a specific course from the CourseCard component
  * Allows clearing a grade if an empty string is provided
  */
 export async function saveGradeAction(courseCode: string, grade: string, userId: string, requirementId?: string) {
@@ -317,6 +407,14 @@ export async function saveGradeAction(courseCode: string, grade: string, userId:
     // Otherwise proceed with normal update/insert
     if (grade.trim() === "") {
       return { error: "Grade cannot be empty" };
+    }
+    
+    // Check prerequisites only for new records being created (not for updates)
+    if (!existingRecord) {
+      const prerequisiteCheck = await checkPrerequisites(courseCode, userId);
+      if (!prerequisiteCheck.success) {
+        return { error: prerequisiteCheck.error };
+      }
     }
     
     // Encrypt the grade on the server side

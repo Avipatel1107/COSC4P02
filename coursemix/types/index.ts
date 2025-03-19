@@ -95,4 +95,12 @@ export interface AcademicProgressSummary {
   remainingCourses: number;
   overallGPA: number;
   percentComplete: number;
+}
+
+export interface CoursePrerequisite {
+  id: string;
+  course_code: string;
+  prerequisite_code: string;
+  min_grade?: number | null;
+  created_at: string;
 } 
