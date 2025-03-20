@@ -9,26 +9,27 @@ export default function PrivacyPolicyPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Privacy Policy</h1>
-      <p className="text-gray-600 dark:text-gray-300">Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+      <p className="text-gray-600 dark:text-gray-300">Last updated: {new Date("March 20, 2025 05:00:00").toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
       
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">1. Introduction</h2>
         <p className="text-gray-600 dark:text-gray-300">
-          At CourseMix, we are committed to protecting your privacy and ensuring the security of your personal information.
-          This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.
+          At CourseMix, to keeping your private data private. Thus, we only collect your personal data as we need it to provide our products and services, and for the fulfillment of our contracts and record-keeping requirements.
+          The CourseMix Privacy Policy details the types of information we collect from you, how we collect the data, how we use it, and how you can control your personal data. 
         </p>
       </section>
       
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">2. Information We Collect</h2>
         <p className="text-gray-600 dark:text-gray-300">
-          We collect information that you provide directly to us when registering for an account, creating a profile, 
-          or interacting with our platform. This may include:
+        We typically collect private data collected from you when you voluntarily provide it to us, for instance, such as:
         </p>
         <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300 space-y-2">
-          <li>Personal identification information (name, email address, student ID)</li>
-          <li>Academic information (program, courses, grades)</li>
+          <li>Brock University Personal Identifying Information (Brocku email address, username, student ID, password)</li>
+          <li>Academic information (grades (encrypted), calendar events, programs, and deadlines)</li>
           <li>User preferences and settings</li>
+          <li>User generated content (Discussions, reviews)</li>
+          <li>Typical browser and device information (IP address, device type, operating system, preffered language, DNS)</li>
           <li>Communication data when you contact us</li>
         </ul>
       </section>
@@ -36,7 +37,6 @@ export default function PrivacyPolicyPage() {
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">3. How We Use Your Information</h2>
         <p className="text-gray-600 dark:text-gray-300">
-          We use the information we collect to:
         </p>
         <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300 space-y-2">
           <li>Provide, maintain, and improve our services</li>
