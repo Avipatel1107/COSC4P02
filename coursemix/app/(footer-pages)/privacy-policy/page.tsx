@@ -37,6 +37,7 @@ export default function PrivacyPolicyPage() {
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">3. How We Use Your Information</h2>
         <p className="text-gray-600 dark:text-gray-300">
+          We use the information we collect to:
         </p>
         <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300 space-y-2">
           <li>Provide, maintain, and improve our services</li>
