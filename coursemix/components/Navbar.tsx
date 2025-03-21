@@ -347,7 +347,7 @@ export default function Navbar() {
                       onClick={toggleReviewsDropdown}
                       className="flex items-center text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 px-2 py-1 gap-1 w-full text-left"
                     >
-                      Course Reviews
+                      Reviews and Discussion
                       <ChevronDown
                         size={16}
                         className={`transition-transform ${
@@ -358,7 +358,7 @@ export default function Navbar() {
                     {isReviewsDropdownOpen && (
                       <div className="relative bg-white dark:bg-gray-800 shadow-md dark:shadow-gray-900 rounded mt-2 w-48 py-1">
                         <Link
-                          href="/protected/discussions"
+                          href="/protected/course-discussions"
                           className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
                           onClick={() => {
                             setIsReviewsDropdownOpen(false);
@@ -368,14 +368,14 @@ export default function Navbar() {
                           Discussions
                         </Link>
                         <Link
-                          href="/protected/review-form"
+                          href="/protected/course-reviews"
                           className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
                           onClick={() => {
                             setIsReviewsDropdownOpen(false);
                             setIsMenuOpen(false);
                           }}
                         >
-                          ReviewForm
+                          Review
                         </Link>
                       </div>
                     )}
