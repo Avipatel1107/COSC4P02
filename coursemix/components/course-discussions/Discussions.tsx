@@ -25,6 +25,9 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
   const [newPost, setNewPost] = useState(""); // State to store new post content
   const [isSubmitting, setIsSubmitting] = useState(false); // State to manage form submission
   const [currentUserId, setCurrentUserId] = useState<string | null>(null); // State to store current user ID
+  const [filterKeyword, setFilterKeyword] = useState<string>(""); // State to manage keyword filter
+  const [filterStartDate, setFilterStartDate] = useState<string>(""); // State to manage start date filter
+  const [filterTime, setFilterTime] = useState<string>(""); // State to manage time filter
 
   // Function to fetch discussion posts and user profiles
   async function fetchPosts() {
@@ -78,6 +81,25 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
     fetchPosts(); // Fetch posts
   }, [courseId]);
 
+  // Filter posts based on the filter state
+  const filteredPosts = posts.filter((post) => {
+    const postDate = new Date(post.created_at).toISOString().split("T")[0]; // Extract the date in YYYY-MM-DD format
+    const matchesKeyword = post.content
+      .toLowerCase()
+      .includes(filterKeyword.toLowerCase());
+    const matchesDate = !filterStartDate || postDate === filterStartDate; // Compare the extracted date with the filterStartDate
+    const matchesTime =
+      !filterTime || new Date(post.created_at).toTimeString().startsWith(filterTime);
+    return matchesKeyword && matchesDate && matchesTime;
+  });
+
+  // Function to clear all filters
+  const clearFilters = () => {
+    setFilterKeyword("");
+    setFilterStartDate("");
+    setFilterTime("");
+  };
+
   // Function to handle form submission
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); // Prevent default form submission
@@ -112,50 +134,128 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
   }
 
   return (
-    <div className="rounded-lg shadow-sm p-4 bg-white dark:bg-gray-800 transition-all hover:shadow-md group mx-4 my-6">
-      {/* Title for the discussions section */}
-      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Discussions for {courseName}</h3>
-      
-      {/* Container for displaying discussion posts */}
-      <div className="space-y-4">
-        {posts.map((post) => (
-          <div
-            key={post.id}
-            className="flex flex-col items-start"
+    <div className="flex flex-row gap-6">
+      {/* Main Content */}
+      <div className="flex-1 rounded-lg shadow-sm p-4 bg-gray-100 dark:bg-gray-800 transition-all hover:shadow-md group">
+        {/* Title for the discussions section */}
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+          Discussions for {courseName}
+        </h3>
+
+        {/* Container for displaying discussion posts */}
+        <div className="space-y-4">
+          {filteredPosts.map((post) => (
+            <div key={post.id} className="flex flex-col items-start">
+              {/* Display user name and post timestamp */}
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-black dark:text-gray-100">
+                  {post.first_name} {post.last_name}
+                </span>
+                <span className="text-sm text-black dark:text-gray-400">
+                  {new Date(post.created_at).toLocaleString()}
+                </span>
+              </div>
+              {/* Display post content */}
+              <div
+                className={`p-2 rounded-lg ${
+                  post.user_id === currentUserId
+                    ? "bg-teal-700 dark:bg-teal-800"
+                    : "bg-gray-300 dark:bg-gray-700"
+                }`}
+              >
+                <p className="text-black dark:text-gray-300">{post.content}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Form for submitting a new discussion post */}
+        <form onSubmit={handleSubmit} className="mt-4">
+          <Input
+            value={newPost}
+            onChange={(e) => setNewPost(e.target.value)}
+            placeholder="Write a discussion post..."
+            className="mt-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white mt-6 font-medium py-2 px-4 rounded-md transition-all duration-200 shadow-sm hover:shadow-md"
           >
-            {/* Display user name and post timestamp */}
-            <div className="flex items-center space-x-2">
-              <span className="font-semibold text-black dark:text-gray-100">
-                {post.first_name} {post.last_name}
-              </span>
-              <span className="text-sm text-black dark:text-gray-400">
-                {new Date(post.created_at).toLocaleString()}
-              </span>
-            </div>
-            {/* Display post content */}
-            <div className={`p-2 rounded-lg ${post.user_id === currentUserId ? "bg-teal-700 dark:bg-teal-800" : "bg-gray-300 dark:bg-gray-700"}`}>
-              <p className="text-black dark:text-gray-300">{post.content}</p>
-            </div>
-          </div>
-        ))}
+            Post
+          </Button>
+        </form>
       </div>
-      
-      {/* Form for submitting a new discussion post */}
-      <form onSubmit={handleSubmit} className="mt-4">
-        <Input
-          value={newPost}
-          onChange={(e) => setNewPost(e.target.value)}
-          placeholder="Write a discussion post..."
-          className="mt-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-        />
+
+      {/* Filter Sidebar */}
+      <div className="w-64 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+          Filters
+        </h3>
+
+        {/* Keyword Filter */}
+        <div className="mb-4">
+          <label
+            htmlFor="keyword-filter"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          >
+            Keyword
+          </label>
+          <Input
+            id="keyword-filter"
+            value={filterKeyword}
+            onChange={(e) => setFilterKeyword(e.target.value)}
+            placeholder="Search by keyword..."
+            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
+        </div>
+
+        {/* Date Filter */}
+        <div className="mb-4">
+          <label
+            htmlFor="start-date"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          >
+            Date
+          </label>
+          <Input
+            id="start-date"
+            type="date"
+            value={filterStartDate}
+            onChange={(e) => setFilterStartDate(e.target.value)}
+            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
+        </div>
+
+        {/* Time Filter */}
+        <div className="mb-4">
+          <label
+            htmlFor="time-filter"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          >
+            Time
+          </label>
+          <Input
+            id="time-filter"
+            type="time"
+            value={filterTime}
+            onChange={(e) => setFilterTime(e.target.value)}
+            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
+        </div>
+
+        {/* Clear Filters Button */}
         <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700 text-white mt-6 font-medium py-2 px-4 rounded-md transition-all duration-200 shadow-sm hover:shadow-md"
+          onClick={clearFilters}
+          className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-all duration-200 shadow-sm hover:shadow-md w-full"
         >
-          Post
+          Clear Filters
         </Button>
-      </form>
+
+        <p className="text-gray-600 dark:text-gray-300 mt-4">
+          Use the filters to narrow down the posts by keywords, date, or time.
+        </p>
+      </div>
     </div>
   );
 }
