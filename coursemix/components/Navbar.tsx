@@ -375,7 +375,7 @@ export default function Navbar() {
                             setIsMenuOpen(false);
                           }}
                         >
-                          ReviewForm
+                          Review
                         </Link>
                       </div>
                     )}

@@ -119,7 +119,7 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
   };
 
   return (
-    <div className="flex flex-row gap-6">
+    <div className="flex flex-col md:flex-row gap-6">
       {/* Main Content */}
       <div className="flex-1">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
@@ -184,7 +184,7 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
       </div>
 
       {/* Filter Sidebar */}
-      <div className="w-64 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
+      <div className="w-full md:w-64 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
         <h4 className="text-md font-semibold text-gray-800 dark:text-gray-100 mb-4">
           Filters
         </h4>
