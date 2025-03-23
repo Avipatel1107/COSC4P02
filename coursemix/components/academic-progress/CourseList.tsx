@@ -37,17 +37,6 @@ interface WorkTerm {
   updated_at: string;
 }
 
-interface Enrollments {
-  id: string;
-  user_id: string;
-  course_id: string;
-  term: string;
-  status: string;
-  courses: {
-    course_code: string;
-  }
-}
-
 type CourseListProps = {
   courses: Course[];
   grades: StudentGrade[];
@@ -55,7 +44,6 @@ type CourseListProps = {
   userId: string;
   isCoopProgram: boolean;
   workTerms?: WorkTerm[];
-  registered?: Enrollments[];
 };
 
 export default function CourseList({ 
@@ -64,8 +52,7 @@ export default function CourseList({
   decryptedGrades, 
   userId, 
   isCoopProgram, 
-  workTerms = [],
-  registered = []
+  workTerms = [] 
 }: CourseListProps) {
   // Organize courses by year
   const coursesByYear = courses.reduce<{ [year: number]: Course[] }>(
@@ -138,12 +125,6 @@ export default function CourseList({
               const gradeRecord = findGradeForRequirement(course.id);
               const gradeDisplay = gradeRecord ? decryptedGrades[gradeRecord.id] : '';
               
-              const isReg = registered.filter(reg =>
-                reg.courses.course_code.search(
-                  new RegExp(".*" + course.course_code.replace(/\s/g, "") + ".*")
-                ) !== -1
-              ).length > 0;
-
               return (
                 <CourseCard
                   key={course.id}
@@ -156,7 +137,6 @@ export default function CourseList({
                   gradeId={gradeRecord?.id}
                   requirementId={course.id}
                   status={gradeRecord?.status}
-                  registered={isReg}
                 />
               );
             })}
