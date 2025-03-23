@@ -202,6 +202,13 @@ export default function ContactPage() {
                       />
                     </svg>
                   </a>
+                  <a href="https://www.linkedin.com/in/course-mix-8049a1357/" className="text-gray-600 dark:text-gray-400 hover:text-teal-600 dark:hover:text-teal-400">
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M19 3A2 2 0 0121 5V19A2 2 0 0119 21H5A2 2 0 013 19V5A2 2 0 015 3H19M18.5 9.5V16H15.5V10.5C15.5 10.1 15.2 9.8 14.8 9.8H14.7C14.3 9.8 14 10.1 14 10.5V16H11V9.5H12.2V10.7C12.6 9.8 13.9 9.5 14.7 9.5H14.8C16.2 9.5 17.3 10.6 17.3 12V16H18.5M9.5 8A1.5 1.5 0 1011 6.5 1.5 1.5 0 009.5 8M8 9.5H10V16H8V9.5Z"
+                      />
+                    </svg>
+                  </a>
                 </div>
               </div>
               
