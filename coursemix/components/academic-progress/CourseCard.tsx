@@ -18,7 +18,6 @@ interface CourseCardProps {
   gradeId?: string;
   status?: string;
   requirementId?: string;
-  registered?: boolean;
 }
 
 export default function CourseCard({
@@ -31,7 +30,6 @@ export default function CourseCard({
   gradeId,
   status,
   requirementId,
-  registered,
 }: CourseCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [grade, setGrade] = useState(existingGrade || "");
@@ -234,10 +232,7 @@ export default function CourseCard({
           <div>
             <div className="flex items-center gap-1 mb-1">
               <h3 className="font-bold text-gray-800 dark:text-gray-100">{courseCode}</h3>
-              {registered && (
-                <span className="text-xs text-gray-600 dark:text-gray-300">Registered</span>
-              )}
-              {!registered && !isInProgress && !hasGrade && (
+              {!isInProgress && !hasGrade && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -249,7 +244,7 @@ export default function CourseCard({
                   <Plus className="h-3 w-3" />
                 </Button>
               )}
-              {!registered && isInProgress && (
+              {isInProgress && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -333,7 +328,7 @@ export default function CourseCard({
                   >
                     Edit
                   </Button>
-                  {(!registered || status !== "in-progress") && gradeId && (
+                  {gradeId && (
                     <Button 
                       variant="outline" 
                       size="sm"

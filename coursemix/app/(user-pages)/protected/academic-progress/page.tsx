@@ -30,70 +30,20 @@ export default async function GradesPage() {
   }
   
   // Fetch the user's grades
-  const { data: grades, error: gradesError } = await supabase
+  const { data: grades, error } = await supabase
     .from("student_grades")
     .select("*")
     .eq("user_id", user.id)
     .order("year", { ascending: false })
     .order("term", { ascending: true });
   
-  if (gradesError) {
+  if (error) {
     // console.error("Error fetching grades:", error);
   }
   
   // Decrypt grades for display
   const decryptedGrades: { [id: string]: string } = {};
-
-  // Get user's program
-  const { data: programData } = await supabase
-    .from("user_profiles")
-    .select("program_id")
-    .eq("user_id", user.id)
-    .single();
-
-  const hasProgram = programData && programData.program_id;
-  let programCourses = [];
-  let isCoopProgram = false;
-  let programInfo = null;
-
-  // Get program information and requirements
-  if (hasProgram) {
-    // Get program information
-    const { data: program, error: programError } = await supabase
-      .from("programs")
-      .select("*")
-      .eq("id", programData.program_id)
-      .single();
-    
-    if (programError) {
-      console.error("Error fetching program info:", programError);
-    } else {
-      programInfo = program;
-      // Check if this is a co-op program
-      isCoopProgram = program?.coop_program || false;
-    }
-
-    // Get program requirements
-    const { data: courses, error: coursesError } = await supabase
-      .from("program_requirements")
-      .select("*")
-      .eq("program_id", programData.program_id);
-    
-    if (coursesError) {
-      console.error("Error fetching program courses:", coursesError);
-    } else {
-      programCourses = courses || [];
-    }
-  }
-
-  // Get enrolled courses
-  const { data: enrollments } = await supabase
-    .from("enrollments")
-    .select("*, courses!inner(course_code)")
-    .eq("user_id", user.id);
   
-  //console.log(enrollments);
-
   if (grades) {
     // Keep track of any grades that need to be updated
     const gradesToUpdate: string[] = [];
@@ -164,55 +114,6 @@ export default async function GradesPage() {
         });
       }
     }
-
-    // Match registered courses to program requirements
-    let to_in_progress = []; 
-    for (let program_course of programCourses) {
-      let course_code = program_course.course_code.replace(/\s/g, "");
-      let match_enrolled = enrollments?.filter(enrollment =>
-        enrollment.courses.course_code.search(new RegExp(".*" + course_code + ".*")) !== -1
-        && enrollment.status === "enrolled"
-      );
-
-      if (match_enrolled && match_enrolled.length > 0) {
-        //console.log(match_enrolled);
-
-        if (match_enrolled.length === 1
-          && grades.filter(grade => 
-            grade.user_id === user.id
-            && grade.course_code === program_course.course_code
-          ).length === 0) {
-          // Single course: match immediately
-          to_in_progress.push({
-            req_code: program_course.course_code,
-            req_id: program_course.id
-          });
-        }
-
-        // TODO: What if multiple enrolled courses match? Maybe dropdown?
-
-        // TODO: Dropdown for electives or "cluster credits"
-        // that are not explicitly marked with the course code.
-      }
-    }
-
-    if (to_in_progress.length > 0) {
-      //console.log(to_in_progress);
-
-      for (let course of to_in_progress) {
-        await supabase
-          .from("student_grades")
-          .insert({
-            user_id: user.id,
-            course_code: course.req_code,
-            grade: null,
-            year: new Date().getFullYear(),
-            term: "Current",
-            status: "in-progress",
-            requirement_id: course.req_id
-          });
-      }
-    }
   }
   
   // Debug output all grades and their decrypted values
@@ -220,6 +121,48 @@ export default async function GradesPage() {
   // grades?.forEach(grade => {
   //   console.log(`${grade.course_code}: DB value = ${grade.grade}, Decrypted = ${decryptedGrades[grade.id]}, Status = ${grade.status}`);
   // });
+  
+  // Get user's program
+  const { data: programData } = await supabase
+    .from("user_profiles")
+    .select("program_id")
+    .eq("user_id", user.id)
+    .single();
+
+  const hasProgram = programData && programData.program_id;
+  let programCourses = [];
+  let isCoopProgram = false;
+  let programInfo = null;
+
+  // Get program information and requirements
+  if (hasProgram) {
+    // Get program information
+    const { data: program, error: programError } = await supabase
+      .from("programs")
+      .select("*")
+      .eq("id", programData.program_id)
+      .single();
+    
+    if (programError) {
+      console.error("Error fetching program info:", programError);
+    } else {
+      programInfo = program;
+      // Check if this is a co-op program
+      isCoopProgram = program?.coop_program || false;
+    }
+
+    // Get program requirements
+    const { data: courses, error: coursesError } = await supabase
+      .from("program_requirements")
+      .select("*")
+      .eq("program_id", programData.program_id);
+    
+    if (coursesError) {
+      console.error("Error fetching program courses:", coursesError);
+    } else {
+      programCourses = courses || [];
+    }
+  }
 
   // Fetch work terms if this is a co-op program
   let workTerms = [];
@@ -447,9 +390,7 @@ export default async function GradesPage() {
                   </svg>
                 </div>
                 <div className="text-blue-700 dark:text-blue-300">
-                  <span className="font-medium">Pro Tip:</span><br />
-                  Click the <span className="inline-flex items-center justify-center bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-full h-4 w-4 text-xs mx-0.5">+</span> icon on a course to mark it as "in progress". This helps you track courses you're currently taking before entering final grades.<br />
-                  Courses you are <Link className="underline" href="/protected/my-courses">currently registered for</Link> are automatically marked as "in progress" by course code.
+                  <span className="font-medium">Pro Tip:</span> Click the <span className="inline-flex items-center justify-center bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-full h-4 w-4 text-xs mx-0.5">+</span> icon on any course to mark it as "in progress". This helps you track courses you're currently taking before entering final grades.
                 </div>
               </div>
               
@@ -460,7 +401,6 @@ export default async function GradesPage() {
                 userId={user.id}
                 isCoopProgram={isCoopProgram}
                 workTerms={workTerms}
-                registered={enrollments || []}
               />
             </div>
           ) : (
