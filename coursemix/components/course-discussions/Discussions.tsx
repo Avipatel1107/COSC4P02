@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { Filter } from "bad-words"; // Import the bad-words package
 
 interface DiscussionsProps {
   courseId: string;
@@ -25,9 +25,13 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
   const [newPost, setNewPost] = useState(""); // State to store new post content
   const [isSubmitting, setIsSubmitting] = useState(false); // State to manage form submission
   const [currentUserId, setCurrentUserId] = useState<string | null>(null); // State to store current user ID
+  const [errorMessage, setErrorMessage] = useState<string | null>(null); // State to manage error messages
   const [filterKeyword, setFilterKeyword] = useState<string>(""); // State to manage keyword filter
   const [filterStartDate, setFilterStartDate] = useState<string>(""); // State to manage start date filter
   const [filterTime, setFilterTime] = useState<string>(""); // State to manage time filter
+
+
+  const profFilter = new Filter(); // Initialize the bad-words filter
 
   // Function to fetch discussion posts and user profiles
   async function fetchPosts() {
@@ -39,7 +43,7 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
       .order("created_at", { ascending: true });
 
     if (discussionsError) {
-      toast.error("Failed to fetch discussions");
+      setErrorMessage("Failed to fetch discussions. Please try again later.");
       return;
     }
 
@@ -49,7 +53,7 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
       .select("user_id, first_name, last_name");
 
     if (profilesError) {
-      toast.error("Failed to fetch user profiles");
+      setErrorMessage("Failed to fetch user profiles. Please try again later.");
       return;
     }
 
@@ -100,19 +104,37 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
     setFilterTime("");
   };
 
+
+  //console.log(profFilter.list)
+
   // Function to handle form submission
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); // Prevent default form submission
     setIsSubmitting(true); // Set submitting state to true
-
+    setErrorMessage(null); // Clear any previous error messages
+  
+    // Check if the post is empty
+    if (!newPost.trim()) {
+      setErrorMessage("Your post cannot be empty. Please write something.");
+      setIsSubmitting(false);
+      return; // Stop submission
+    }
+  
+    // Check for inappropriate content
+    if (profFilter.isProfane(newPost)) {
+      setErrorMessage("Your post contains inappropriate content. Please revise it.");
+      setIsSubmitting(false);
+      return; // Stop submission
+    }
+  
     // Get the current user
     const { data } = await supabase.auth.getUser();
     if (!data?.user) {
-      toast.error("User not authenticated");
+      setErrorMessage("User not authenticated. Please log in.");
       setIsSubmitting(false);
       return;
     }
-
+  
     // Insert new post into the discussions table
     const { error } = await supabase
       .from("discussions")
@@ -121,26 +143,33 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
         course_id: courseId,
         content: newPost,
       });
-
+  
     if (error) {
-      toast.error("Failed to post discussion");
+      setErrorMessage("Failed to post discussion. Please try again later.");
     } else {
-      toast.success("Discussion posted successfully");
       setNewPost(""); // Clear the new post input
       fetchPosts(); // Refetch the posts after submitting
     }
-
+  
     setIsSubmitting(false); // Set submitting state to false
   }
+  
 
   return (
-    <div className="flex flex-row gap-6">
+    <div className="flex flex-col md:flex-row gap-6">
       {/* Main Content */}
       <div className="flex-1 rounded-lg shadow-sm p-4 bg-gray-100 dark:bg-gray-800 transition-all hover:shadow-md group">
         {/* Title for the discussions section */}
         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
           Discussions for {courseName}
         </h3>
+
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-md dark:bg-red-800 dark:text-red-300">
+            {errorMessage}
+          </div>
+        )}
 
         {/* Container for displaying discussion posts */}
         <div className="space-y-4">
@@ -188,7 +217,7 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
       </div>
 
       {/* Filter Sidebar */}
-      <div className="w-64 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
+      <div className="w-full md:w-64 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
           Filters
         </h3>
