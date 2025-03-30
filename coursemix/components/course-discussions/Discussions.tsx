@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Filter } from "bad-words"; // Import the bad-words package
+import { Filter } from "bad-words";
 
 interface DiscussionsProps {
   courseId: string;
@@ -20,22 +20,22 @@ interface Post {
 }
 
 export default function Discussions({ courseId, courseName }: DiscussionsProps) {
-  const supabase = createClient(); // Initialize Supabase client
-  const [posts, setPosts] = useState<Post[]>([]); // State to store discussion posts
-  const [newPost, setNewPost] = useState(""); // State to store new post content
-  const [isSubmitting, setIsSubmitting] = useState(false); // State to manage form submission
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // State to store current user ID
-  const [errorMessage, setErrorMessage] = useState<string | null>(null); // State to manage error messages
-  const [filterKeyword, setFilterKeyword] = useState<string>(""); // State to manage keyword filter
-  const [filterStartDate, setFilterStartDate] = useState<string>(""); // State to manage start date filter
-  const [filterTime, setFilterTime] = useState<string>(""); // State to manage time filter
+  const supabase = createClient();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [newPost, setNewPost] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [filterKeyword, setFilterKeyword] = useState<string>("");
+  const [filterStartDate, setFilterStartDate] = useState<string>("");
+  const [filterTime, setFilterTime] = useState<string>("");
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState<string>("");
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
+  const profFilter = new Filter();
 
-  const profFilter = new Filter(); // Initialize the bad-words filter
-
-  // Function to fetch discussion posts and user profiles
   async function fetchPosts() {
-    // Fetch discussion posts for the selected course
     const { data: discussionsData, error: discussionsError } = await supabase
       .from("discussions")
       .select("*")
@@ -47,7 +47,6 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
       return;
     }
 
-    // Fetch user profiles for all posts
     const { data: profilesData, error: profilesError } = await supabase
       .from("user_profiles")
       .select("user_id, first_name, last_name");
@@ -57,7 +56,6 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
       return;
     }
 
-    // Combine the discussions with user profiles
     const combinedPosts = discussionsData.map((post: any) => {
       const userProfile = profilesData.find(
         (profile) => profile.user_id === post.user_id
@@ -69,73 +67,67 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
       };
     });
 
-    setPosts(combinedPosts); // Update the posts state with combined data
+    setPosts(combinedPosts);
   }
 
-  // useEffect to fetch current user and posts when the component mounts or courseId changes
   useEffect(() => {
     async function getCurrentUser() {
       const { data } = await supabase.auth.getUser();
       if (data?.user) {
-        setCurrentUserId(data.user.id); // Set the current user ID
+        setCurrentUserId(data.user.id);
       }
     }
 
-    getCurrentUser(); // Fetch current user
-    fetchPosts(); // Fetch posts
+    getCurrentUser();
+    fetchPosts();
   }, [courseId]);
 
-  // Filter posts based on the filter state
   const filteredPosts = posts.filter((post) => {
-    const postDate = new Date(post.created_at).toISOString().split("T")[0]; // Extract the date in YYYY-MM-DD format
+    const postDate = new Date(post.created_at).toISOString().split("T")[0];
     const matchesKeyword = post.content
       .toLowerCase()
       .includes(filterKeyword.toLowerCase());
-    const matchesDate = !filterStartDate || postDate === filterStartDate; // Compare the extracted date with the filterStartDate
+    const matchesDate = !filterStartDate || postDate === filterStartDate;
     const matchesTime =
       !filterTime || new Date(post.created_at).toTimeString().startsWith(filterTime);
     return matchesKeyword && matchesDate && matchesTime;
   });
 
-  // Function to clear all filters
   const clearFilters = () => {
     setFilterKeyword("");
     setFilterStartDate("");
     setFilterTime("");
   };
 
+  const setTemporaryErrorMessage = (message: string, duration: number = 3000) => {
+    setErrorMessage(message);
+    setTimeout(() => setErrorMessage(null), duration);
+  };
 
-  //console.log(profFilter.list)
-
-  // Function to handle form submission
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); // Prevent default form submission
-    setIsSubmitting(true); // Set submitting state to true
-    setErrorMessage(null); // Clear any previous error messages
-  
-    // Check if the post is empty
+    e.preventDefault();
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
     if (!newPost.trim()) {
-      setErrorMessage("Your post cannot be empty. Please write something.");
-      setIsSubmitting(false);
-      return; // Stop submission
-    }
-  
-    // Check for inappropriate content
-    if (profFilter.isProfane(newPost)) {
-      setErrorMessage("Your post contains inappropriate content. Please revise it.");
-      setIsSubmitting(false);
-      return; // Stop submission
-    }
-  
-    // Get the current user
-    const { data } = await supabase.auth.getUser();
-    if (!data?.user) {
-      setErrorMessage("User not authenticated. Please log in.");
+      setTemporaryErrorMessage("Your post cannot be empty. Please write something.");
       setIsSubmitting(false);
       return;
     }
-  
-    // Insert new post into the discussions table
+
+    if (profFilter.isProfane(newPost)) {
+      setTemporaryErrorMessage("Your post contains inappropriate content. Please revise it.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { data } = await supabase.auth.getUser();
+    if (!data?.user) {
+      setTemporaryErrorMessage("User not authenticated. Please log in.");
+      setIsSubmitting(false);
+      return;
+    }
+
     const { error } = await supabase
       .from("discussions")
       .insert({
@@ -143,39 +135,85 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
         course_id: courseId,
         content: newPost,
       });
-  
+
     if (error) {
-      setErrorMessage("Failed to post discussion. Please try again later.");
+      setTemporaryErrorMessage("Failed to post discussion. Please try again later.");
     } else {
-      setNewPost(""); // Clear the new post input
-      fetchPosts(); // Refetch the posts after submitting
+      setNewPost("");
+      fetchPosts();
     }
-  
-    setIsSubmitting(false); // Set submitting state to false
+
+    setIsSubmitting(false);
   }
-  
+
+  const handleEdit = (postId: string, currentContent: string) => {
+    setEditingPostId(postId);
+    setEditContent(currentContent);
+  };
+
+  const handleSave = async (postId: string) => {
+    if (!editContent.trim()) {
+      setErrorMessage("Edited content cannot be empty.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("discussions")
+      .update({ content: editContent })
+      .eq("id", postId);
+
+    if (error) {
+      setErrorMessage("Failed to update the post. Please try again later.");
+    } else {
+      setEditingPostId(null);
+      fetchPosts();
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingPostId(null);
+    setEditContent("");
+  };
+
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content);
+    setErrorMessage("Message copied to clipboard!");
+    setTimeout(() => setErrorMessage(null), 2000);
+  };
+
+  const handleDelete = async (postId: string) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this post?");
+    if (!confirmDelete) return;
+
+    const { error } = await supabase
+      .from("discussions")
+      .delete()
+      .eq("id", postId);
+
+    if (error) {
+      setTemporaryErrorMessage("Failed to delete the post. Please try again later.");
+    } else {
+      fetchPosts();
+    }
+  };
 
   return (
-    <div className="flex flex-col md:flex-row gap-6">
-      {/* Main Content */}
-      <div className="flex-1 rounded-lg shadow-sm p-4 bg-gray-100 dark:bg-gray-800 transition-all hover:shadow-md group">
-        {/* Title for the discussions section */}
+    <div className="flex flex-col  md:flex-row gap-6">
+      <div className="flex-1 rounded-lg shadow-sm p-4 bg-gray-100 dark:bg-gray-900 transition-all hover:shadow-md group">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
           Discussions for {courseName}
         </h3>
 
-        {/* Error Message */}
         {errorMessage && (
-          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-md dark:bg-red-800 dark:text-red-300">
-            {errorMessage}
+          <div className="mb-4 p-3 border-l-4 border-red-600 bg-red-50 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-md">
+            <p className="font-semibold">Error:</p>
+            <p>{errorMessage}</p>
           </div>
         )}
 
-        {/* Container for displaying discussion posts */}
         <div className="space-y-4">
           {filteredPosts.map((post) => (
             <div key={post.id} className="flex flex-col items-start">
-              {/* Display user name and post timestamp */}
               <div className="flex items-center space-x-2">
                 <span className="font-semibold text-black dark:text-gray-100">
                   {post.first_name} {post.last_name}
@@ -184,21 +222,78 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
                   {new Date(post.created_at).toLocaleString()}
                 </span>
               </div>
-              {/* Display post content */}
-              <div
-                className={`p-2 rounded-lg ${
-                  post.user_id === currentUserId
-                    ? "bg-teal-700 dark:bg-teal-800"
-                    : "bg-gray-300 dark:bg-gray-700"
-                }`}
-              >
-                <p className="text-black dark:text-gray-300">{post.content}</p>
-              </div>
+
+              {editingPostId === post.id ? (
+                <div className="flex items-center gap-2 w-full mt-2">
+                  <Input
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    className="flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-xl"
+                  />
+                  <Button
+                    onClick={() => handleSave(post.id)}
+                    className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-800 rounded-xl"
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    onClick={handleCancel}
+                    className="bg-gray-600 hover:bg-gray-700 text-white dark:bg-gray-700 dark:hover:bg-gray-800 rounded-xl"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  className={`p-3 rounded-xl mt-1 flex justify-between items-center ${
+                    post.user_id === currentUserId
+                      ? "bg-teal-700 dark:bg-teal-800"
+                      : "bg-gray-200 dark:bg-gray-700"
+                  }`}
+                >
+                  <p className="text-black dark:text-gray-300 flex-1">{post.content}</p>
+                  {post.user_id === currentUserId && (
+                    <div className="relative">
+                      <button
+                        onClick={() =>
+                          setDropdownOpen(dropdownOpen === post.id ? null : post.id)
+                        }
+                        className="p-1 text-white dark:text-gray-300 hover:text-black focus:outline-none"
+                        aria-label="Options"
+                      >
+                        <span className="text-lg font-bold">⋮</span>
+                      </button>
+
+                      {dropdownOpen === post.id && (
+                        <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 shadow-lg rounded-xl z-10 border dark:border-gray-700 overflow-hidden">
+                          <button
+                            onClick={() => handleEdit(post.id, post.content)}
+                            className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300 rounded-xl"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleCopy(post.content)}
+                            className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300 rounded-xl"
+                          >
+                            Copy
+                          </button>
+                          <button
+                            onClick={() => handleDelete(post.id)}
+                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-800 rounded-xl"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
 
-        {/* Form for submitting a new discussion post */}
         <form onSubmit={handleSubmit} className="mt-4">
           <Input
             value={newPost}
@@ -216,13 +311,11 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
         </form>
       </div>
 
-      {/* Filter Sidebar */}
-      <div className="w-full md:w-64 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
+      <div className="w-64 h-full md:w-64 bg-gray-100 dark:bg-gray-900 p-4 rounded-lg shadow-md">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
           Filters
         </h3>
 
-        {/* Keyword Filter */}
         <div className="mb-4">
           <label
             htmlFor="keyword-filter"
@@ -239,7 +332,6 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
           />
         </div>
 
-        {/* Date Filter */}
         <div className="mb-4">
           <label
             htmlFor="start-date"
@@ -256,7 +348,6 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
           />
         </div>
 
-        {/* Time Filter */}
         <div className="mb-4">
           <label
             htmlFor="time-filter"
@@ -273,17 +364,12 @@ export default function Discussions({ courseId, courseName }: DiscussionsProps) 
           />
         </div>
 
-        {/* Clear Filters Button */}
         <Button
           onClick={clearFilters}
           className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-all duration-200 shadow-sm hover:shadow-md w-full"
         >
           Clear Filters
         </Button>
-
-        <p className="text-gray-600 dark:text-gray-300 mt-4">
-          Use the filters to narrow down the posts by keywords, date, or time.
-        </p>
       </div>
     </div>
   );
