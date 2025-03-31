@@ -15,6 +15,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/lodash.debounce": "^4.0.9",
     "autoprefixer": "10.4.20",
+    "bad-words": "^4.0.0",
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -26,9 +27,10 @@
     "prettier": "^3.3.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "react-hot-toast": "^2.5.2",
     "react-icons": "^5.5.0",
     "resend": "^4.1.2",
-    "sonner": "^2.0.1"
+    "sonner": "^2.0.2"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

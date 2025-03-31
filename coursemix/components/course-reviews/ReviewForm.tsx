@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { Filter } from "bad-words"; // Import the profanity filter
 
 interface ReviewFormProps {
   courseId: string;
@@ -23,11 +23,17 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
   const [difficulty, setDifficulty] = useState("");
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null); // Error message state
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState<string>("");
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
   // Filter states
   const [filterKeyword, setFilterKeyword] = useState<string>("");
   const [filterSort, setFilterSort] = useState<string>(""); // "latest", "oldest", or ""
   const [filterDifficulty, setFilterDifficulty] = useState<string>("");
+
+  const profFilter = new Filter(); // Initialize the profanity filter
 
   useEffect(() => {
     async function fetchReviews() {
@@ -61,13 +67,32 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
       return 0;
     });
 
+  const setTemporaryErrorMessage = (message: string, duration: number = 3000) => {
+    setErrorMessage(message);
+    setTimeout(() => setErrorMessage(null), duration);
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage(null);
+
+    if (!review.trim()) {
+      setTemporaryErrorMessage("Your review cannot be empty. Please write something.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (profFilter.isProfane(review)) {
+      setTemporaryErrorMessage("Your review contains inappropriate content. Please revise it.");
+      setIsSubmitting(false);
+      return;
+    }
+
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast.error("User not authenticated");
+      setTemporaryErrorMessage("User not authenticated. Please log in.");
       setIsSubmitting(false);
       return;
     }
@@ -82,9 +107,8 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
       });
 
     if (error) {
-      toast.error("Failed to submit review");
+      setTemporaryErrorMessage("Failed to submit review. Please try again later.");
     } else {
-      toast.success("Review submitted successfully");
       setReview("");
       setDifficulty("");
       // Fetch the updated reviews
@@ -97,6 +121,66 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
 
     setIsSubmitting(false);
   }
+
+  const handleEdit = (reviewId: string, currentContent: string) => {
+    setEditingReviewId(reviewId);
+    setEditContent(currentContent);
+  };
+
+  const handleSave = async (reviewId: string) => {
+    if (!editContent.trim()) {
+      setTemporaryErrorMessage("Edited content cannot be empty.");
+      return;
+    }
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("reviews")
+      .update({ review: editContent })
+      .eq("id", reviewId);
+
+    if (error) {
+      setTemporaryErrorMessage("Failed to update the review. Please try again later.");
+    } else {
+      setEditingReviewId(null);
+      const { data } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("course_id", courseId);
+      if (data) setReviews(data);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingReviewId(null);
+    setEditContent("");
+  };
+
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content);
+    setTemporaryErrorMessage("Review copied to clipboard!");
+  };
+
+  const handleDelete = async (reviewId: string) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this review?");
+    if (!confirmDelete) return;
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("reviews")
+      .delete()
+      .eq("id", reviewId);
+
+    if (error) {
+      setTemporaryErrorMessage("Failed to delete the review. Please try again later.");
+    } else {
+      const { data } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("course_id", courseId);
+      if (data) setReviews(data);
+    }
+  };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -126,22 +210,92 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
           Reviews for {courseName}
         </h3>
 
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mb-4 p-3 border-l-4 border-red-600 bg-red-50 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-md">
+            <p className="font-semibold">Error:</p>
+            <p>{errorMessage}</p>
+          </div>
+        )}
+
         {/* Filtered Reviews */}
         {filteredReviews.length === 0 ? (
           <p className="text-gray-600 dark:text-gray-300">No reviews match the filters.</p>
         ) : (
           <ul className="space-y-2">
             {filteredReviews.map((r) => (
-              <li key={r.id} className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
-                <span className="text-gray-600 dark:text-gray-300">{r.review}</span>
-                <br />
-                <span
-                  className={`text-sm px-2 py-1 rounded-full ${getDifficultyColor(
-                    r.difficulty
-                  )}`}
-                >
-                  Difficulty: {r.difficulty}
-                </span>
+              <li
+                key={r.id}
+                className="p-3 rounded-xl mt-1 flex justify-between items-center bg-gray-100 dark:bg-gray-800"
+              >
+                {editingReviewId === r.id ? (
+                  <div className="flex items-center gap-2 w-full">
+                    <Input
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className="flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-xl"
+                    />
+                    <Button
+                      onClick={() => handleSave(r.id)}
+                      className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-800 rounded-xl"
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      onClick={handleCancel}
+                      className="bg-gray-600 hover:bg-gray-700 text-white dark:bg-gray-700 dark:hover:bg-gray-800 rounded-xl"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-gray-600 dark:text-gray-300">{r.review}</p>
+                      <span
+                        className={`text-sm px-2 py-1 rounded-full ${getDifficultyColor(
+                          r.difficulty
+                        )}`}
+                      >
+                        Difficulty: {r.difficulty}
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <button
+                        onClick={() =>
+                          setDropdownOpen(dropdownOpen === r.id ? null : r.id)
+                        }
+                        className="p-1 text-gray-600 dark:text-gray-300 hover:text-black focus:outline-none"
+                        aria-label="Options"
+                      >
+                        <span className="text-lg font-bold">⋮</span>
+                      </button>
+
+                      {dropdownOpen === r.id && (
+                        <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 shadow-lg rounded-xl z-10 border dark:border-gray-700 overflow-hidden">
+                          <button
+                            onClick={() => handleEdit(r.id, r.review)}
+                            className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300 rounded-xl"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleCopy(r.review)}
+                            className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300 rounded-xl"
+                          >
+                            Copy
+                          </button>
+                          <button
+                            onClick={() => handleDelete(r.id)}
+                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-800 rounded-xl"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </li>
             ))}
           </ul>
@@ -184,7 +338,7 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
       </div>
 
       {/* Filter Sidebar */}
-      <div className="w-full md:w-64 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
+      <div className="h-full bg-gray-100 dark:bg-gray-900 p-4 rounded-lg shadow-md">
         <h4 className="text-md font-semibold text-gray-800 dark:text-gray-100 mb-4">
           Filters
         </h4>
