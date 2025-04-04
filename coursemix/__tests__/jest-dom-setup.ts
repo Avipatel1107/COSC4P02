@@ -16,4 +16,12 @@ declare global {
       // Add any other matchers you need
     }
   }
-} 
+}
+
+// Add a dummy test to prevent Jest from throwing an error
+// about this file not containing any tests
+describe('Jest DOM Setup', () => {
+  it('should load successfully', () => {
+    expect(true).toBe(true);
+  });
+}); 
