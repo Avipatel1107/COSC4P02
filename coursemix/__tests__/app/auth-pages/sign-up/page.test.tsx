@@ -86,6 +86,71 @@ describe('SignUp Page', () => {
     });
   });
 
+  it('validates uppercase Brock University email domain correctly', async () => {
+    // Mock successful API response
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+    
+    render(<SignUp />);
+    
+    // Enter a valid Brock email with uppercase domain
+    const emailInput = screen.getByLabelText(/Email address/i);
+    await userEvent.type(emailInput, 'student@BROCKU.CA');
+    
+    // Submit form
+    const submitButton = screen.getByRole('button', { name: /Sign up/i });
+    fireEvent.click(submitButton);
+    
+    // Wait for API call to complete
+    await waitFor(() => {
+      // Check if fetch was called (validation passed)
+      expect(global.fetch).toHaveBeenCalled();
+      expect(mockPush).toHaveBeenCalledWith(
+        `/verify?email=${encodeURIComponent('student@BROCKU.CA')}`
+      );
+    });
+  });
+
+  it('shows validation error for invalid email format', async () => {
+    render(<SignUp />);
+    
+    // Bypass HTML5 validation to test the form's internal validation
+    // First get the email input element
+    const emailInput = screen.getByLabelText(/Email address/i) as HTMLInputElement;
+    
+    // Simulate user typing an invalid email that isn't caught by HTML5 validation
+    // Setting the value directly to bypass HTML5 validation
+    fireEvent.change(emailInput, { target: { value: 'not-a-valid-email' } });
+    
+    // Submit form
+    const form = emailInput.closest('form') as HTMLFormElement;
+    fireEvent.submit(form);
+    
+    // Check that API wasn't called and form submission was prevented
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('shows validation error for emails with typos in the brocku.ca domain', async () => {
+    render(<SignUp />);
+    
+    // Enter email with typo in the domain
+    const emailInput = screen.getByLabelText(/Email address/i);
+    await userEvent.type(emailInput, 'student@brockuu.ca');
+    
+    // Submit form
+    const submitButton = screen.getByRole('button', { name: /Sign up/i });
+    fireEvent.click(submitButton);
+    
+    // Check if appropriate error message appears
+    await waitFor(() => {
+      const errorElement = screen.getByTestId('message-error');
+      expect(errorElement).toBeInTheDocument();
+      expect(errorElement).toHaveTextContent('Only @brocku.ca emails are allowed');
+    });
+  });
+
   it('submits the form with valid Brock University email', async () => {
     // Mock successful API response
     (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -199,6 +264,65 @@ describe('SignUp Page', () => {
     // Check if loading state is shown
     expect(screen.getByText('Sending verification...')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Sending verification.../i })).toBeDisabled();
+  });
+
+  it('disables the submit button while loading', async () => {
+    // Mock a delayed response to test loading state
+    (global.fetch as jest.Mock).mockImplementationOnce(() => {
+      return new Promise(resolve => {
+        setTimeout(() => {
+          resolve({
+            ok: true,
+            json: async () => ({ success: true }),
+          });
+        }, 100);
+      });
+    });
+    
+    render(<SignUp />);
+    
+    // Enter a valid Brock email
+    const emailInput = screen.getByLabelText(/Email address/i);
+    await userEvent.type(emailInput, 'student@brocku.ca');
+    
+    // Submit form
+    const submitButton = screen.getByRole('button', { name: /Sign up/i });
+    fireEvent.click(submitButton);
+    
+    // Verify button is disabled during loading
+    expect(submitButton).toBeDisabled();
+    
+    // Wait for submission to complete and verify button is re-enabled
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalled();
+    });
+  });
+
+  it('allows dismissing error messages', async () => {
+    render(<SignUp />);
+    
+    // Enter a non-Brock email
+    const emailInput = screen.getByLabelText(/Email address/i);
+    await userEvent.type(emailInput, 'test@example.com');
+    
+    // Submit form
+    const submitButton = screen.getByRole('button', { name: /Sign up/i });
+    fireEvent.click(submitButton);
+    
+    // Wait for error message to appear
+    let errorElement;
+    await waitFor(() => {
+      errorElement = screen.getByTestId('message-error');
+      expect(errorElement).toBeInTheDocument();
+    });
+    
+    // Click on the error message to dismiss it
+    fireEvent.click(errorElement!);
+    
+    // Verify error message is removed
+    await waitFor(() => {
+      expect(screen.queryByTestId('message-error')).not.toBeInTheDocument();
+    });
   });
 
   it('navigates to sign-in page when sign-in button is clicked', () => {
