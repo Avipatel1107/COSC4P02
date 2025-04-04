@@ -27,6 +27,7 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState<string>("");
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // Current user ID
 
   // Filter states
   const [filterKeyword, setFilterKeyword] = useState<string>("");
@@ -45,7 +46,17 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
 
       if (data) setReviews(data);
     }
+
+    async function fetchCurrentUser() {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.getUser();
+      if (data?.user) {
+        setCurrentUserId(data.user.id);
+      }
+    }
+
     fetchReviews();
+    fetchCurrentUser();
   }, [courseId]);
 
   // Filter logic
@@ -273,23 +284,27 @@ export default function ReviewForm({ courseId, courseName }: ReviewFormProps) {
 
                       {dropdownOpen === r.id && (
                         <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 shadow-lg rounded-xl z-10 border dark:border-gray-700 overflow-hidden">
-                          <button
-                            onClick={() => handleEdit(r.id, r.review)}
-                            className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300 rounded-xl"
-                          >
-                            Edit
-                          </button>
+                          {r.user_id === currentUserId && (
+                            <>
+                              <button
+                                onClick={() => handleEdit(r.id, r.review)}
+                                className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300 rounded-xl"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(r.id)}
+                                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-800 rounded-xl"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
                           <button
                             onClick={() => handleCopy(r.review)}
                             className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300 rounded-xl"
                           >
                             Copy
-                          </button>
-                          <button
-                            onClick={() => handleDelete(r.id)}
-                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-800 rounded-xl"
-                          >
-                            Delete
                           </button>
                         </div>
                       )}
