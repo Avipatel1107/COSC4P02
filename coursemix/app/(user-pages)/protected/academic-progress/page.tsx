@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import GradesList from "@/components/academic-progress/GradesList";
 import CourseList from "@/components/academic-progress/CourseList";
+import ExportButton from "@/components/academic-progress/ExportButton";
 import { decryptGrade } from "@/utils/grade-utils";
 import Link from "next/link";
 import { Toaster } from "sonner";
@@ -246,6 +247,69 @@ export default async function GradesPage() {
   const effectiveCompletedCourses = completedCourses + inProgressCourses;
   const remainingCourses = Math.max(0, totalRequiredCourses - effectiveCompletedCourses);
   
+  // Calculate GPA for export
+  let overallGPA = 0;
+  let totalGradePoints = 0;
+  let totalCredits = 0;
+  
+  if (grades) {
+    grades.forEach(grade => {
+      if (grade.status === 'completed') {
+        const decryptedGrade = decryptedGrades[grade.id];
+        let numericGrade = 0;
+        
+        if (decryptedGrade && decryptedGrade !== 'N/A' && decryptedGrade !== 'Error' && decryptedGrade !== 'Decryption Error') {
+          if (!isNaN(Number(decryptedGrade))) {
+            numericGrade = Number(decryptedGrade);
+          } else {
+            // Convert letter grades to numeric
+            switch(decryptedGrade) {
+              case 'A+': numericGrade = 90; break;
+              case 'A': numericGrade = 85; break;
+              case 'A-': numericGrade = 80; break;
+              case 'B+': numericGrade = 77; break;
+              case 'B': numericGrade = 75; break;
+              case 'B-': numericGrade = 70; break;
+              case 'C+': numericGrade = 67; break;
+              case 'C': numericGrade = 65; break;
+              case 'C-': numericGrade = 60; break;
+              case 'D+': numericGrade = 57; break;
+              case 'D': numericGrade = 55; break;
+              case 'D-': numericGrade = 50; break;
+              case 'F': numericGrade = 45; break;
+            }
+          }
+          
+          // Convert to 4.0 scale
+          let gradePoints = 0;
+          if (numericGrade >= 90) gradePoints = 4.0;
+          else if (numericGrade >= 85) gradePoints = 4.0;
+          else if (numericGrade >= 80) gradePoints = 3.7;
+          else if (numericGrade >= 77) gradePoints = 3.3;
+          else if (numericGrade >= 73) gradePoints = 3.0;
+          else if (numericGrade >= 70) gradePoints = 2.7;
+          else if (numericGrade >= 67) gradePoints = 2.3;
+          else if (numericGrade >= 63) gradePoints = 2.0;
+          else if (numericGrade >= 60) gradePoints = 1.7;
+          else if (numericGrade >= 57) gradePoints = 1.3;
+          else if (numericGrade >= 53) gradePoints = 1.0;
+          else if (numericGrade >= 50) gradePoints = 0.7;
+          else gradePoints = 0.0;
+          
+          // Find the course to get credit weight
+          const course = programCourses.find((c: any) => c.course_code === grade.course_code);
+          const creditWeight = course?.credit_weight || 1;
+          
+          totalGradePoints += gradePoints * creditWeight;
+          totalCredits += creditWeight;
+        }
+      }
+    });
+    
+    // Calculate GPA
+    overallGPA = totalCredits > 0 ? totalGradePoints / totalCredits : 0;
+  }
+  
   // Standard course load
   const coursesPerTerm = 5;
   
@@ -360,10 +424,27 @@ export default async function GradesPage() {
       <Toaster position="top-right" />
       <div className="max-w-6xl mx-auto px-4">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Academic Progress</h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-2">
-            View your degree progression and manage your course grades.
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Academic Progress</h1>
+              <p className="text-gray-600 dark:text-gray-300 mt-2">
+                View your degree progression and manage your course grades.
+              </p>
+            </div>
+            
+            <ExportButton 
+              grades={grades || []}
+              decryptedGrades={decryptedGrades}
+              userName={`${userProfile.first_name} ${userProfile.last_name}`}
+              userId={userProfile.student_number || user.id.substring(0, 8)}
+              programName={programInfo?.program_name}
+              completedCourses={completedCourses}
+              inProgressCourses={inProgressCourses}
+              totalRequiredCourses={totalRequiredCourses}
+              overallGPA={overallGPA}
+              projectedGraduation={ceremonyDisplay}
+            />
+          </div>
         </div>
 
         {/* Grades Overview Section */}
