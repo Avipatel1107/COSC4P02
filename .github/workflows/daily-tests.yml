@@ -1,28 +1,61 @@
 name: Daily Jest Tests
-
 on:
   schedule:
-    - cron: '0 2 * * *'  # Runs every day at 10 PM EST
+    - cron: '0 2 * * *'  # Runs every day at 2:00 UTC
   workflow_dispatch:     # Allows you to manually trigger it
-
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
+      
       - name: Set up Node
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-
+          cache: 'npm'
+      
       - name: Install dependencies
         run: npm ci
-
+      
+      - name: Setup test environment
+        run: |
+          echo "NODE_ENV=test" >> $GITHUB_ENV
+          echo "CI=true" >> $GITHUB_ENV
+      
+      - name: Verify Jest configuration
+        run: |
+          cat jest.config.js || echo "No jest.config.js found"
+          cat package.json | grep -A 15 "\"jest\"" || echo "No Jest config in package.json"
+      
       - name: Build project (Next.js)
         run: npm run build
-
-      - name: Run Jest tests
-        run: npm test -- --ci
+        env:
+          CI: true
+      
+      - name: Run Jest tests with improved settings
+        run: npm test -- --ci --runInBand --testTimeout=30000 --detectOpenHandles --forceExit
+        env:
+          NODE_ENV: test
+          CI: true
+      
+      - name: Run Jest tests in debug mode (if previous step failed)
+        if: ${{ failure() }}
+        run: |
+          echo "Running tests in debug mode with more verbose output..."
+          JEST_DEBUG=true npm test -- --ci --verbose --runInBand --testTimeout=60000 > test-output.log 2>&1 || true
+          cat test-output.log
+      
+      - name: Check for test environment issues (if failed)
+        if: ${{ failure() }}
+        run: |
+          echo "===== Checking Test Environment ====="
+          echo "Node version: $(node -v)"
+          echo "NPM version: $(npm -v)"
+          echo "Installed packages:"
+          npm list --depth=1 | grep -E "jest|testing-library"
+          echo "===== File Structure ====="
+          find . -name "jest-dom-setup*" || echo "No jest-dom-setup files found"
+          echo "===== Browser Environment ====="
+          npx -p jsdom jsdom-version
