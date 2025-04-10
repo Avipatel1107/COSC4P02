@@ -23,6 +23,13 @@ jobs:
 
       - name: Build project (Next.js)
         run: cd coursemix && npm run build
+        env:
+              NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+              NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+              SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+              RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+              NEXT_PUBLIC_GRADE_ENCRYPTION_SECRET: ${{ secrets.NEXT_PUBLIC_GRADE_ENCRYPTION_SECRET }}
+              GRADE_ENCRYPTION_SECRET: ${{ secrets.GRADE_ENCRYPTION_SECRET }}
 
       - name: Run Jest tests
         run: cd coursemix && npm test -- --ci
