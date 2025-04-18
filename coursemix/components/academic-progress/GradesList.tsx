@@ -4,15 +4,36 @@ import { useState, useEffect } from 'react';
 import { numericToLetterGrade, calculateGPA } from '@/utils/grade-utils';
 import { updateGradeAction, deleteGradeAction, forceDeleteGradeAction } from '@/app/academic-progress-actions';
 import { useRouter } from 'next/navigation';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
+
+// Extend jsPDF type to include autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+    lastAutoTable: {
+      finalY: number;
+    };
+  }
+}
 
 type TermType = 'Fall' | 'Winter' | 'Spring' | 'Summer';
 
 interface Grade {
   id: string;
   course_code: string;
-  grade: string;
-  term: string;
   year: number;
+  term: TermType;
+  status: 'completed' | 'in-progress';
+  decryptedValue?: string;
+}
+
+interface WorkTerm {
+  id: string;
+  user_id: string;
+  term_name: string;
+  company_name?: string;
   status: string;
   created_at: string;
   updated_at: string;
@@ -35,9 +56,26 @@ interface GradesListProps {
     totalRequiredCourses: number;
     isCeremony?: boolean;
   };
+  userProfile?: {
+    first_name: string;
+    last_name: string;
+    student_number?: string;
+  };
+  program?: {
+    program_name: string;
+    coop_program?: boolean;
+  };
+  workTerms?: WorkTerm[];
 }
 
-export default function GradesList({ grades, decryptedGrades, graduationProjection }: GradesListProps) {
+export default function GradesList({ 
+  grades, 
+  decryptedGrades, 
+  graduationProjection, 
+  userProfile, 
+  program,
+  workTerms = []
+}: GradesListProps) {
   const router = useRouter();
   const [editGradeId, setEditGradeId] = useState<string | null>(null);
   const [editGradeValue, setEditGradeValue] = useState('');
@@ -46,6 +84,7 @@ export default function GradesList({ grades, decryptedGrades, graduationProjecti
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
   
   // Debug log to check grades and decrypted grades
   useEffect(() => {
@@ -333,6 +372,272 @@ export default function GradesList({ grades, decryptedGrades, graduationProjecti
   const percentInProgress = Math.min(100 - percentComplete, Math.round((inProgressCourses / 40) * 100));
   const totalPercentage = percentComplete + percentInProgress;
   
+  // Export transcript to PDF
+  const exportTranscript = async () => {
+    setExportingPdf(true);
+    setError(null);
+    
+    try {
+      // Debug log to check grades and their status
+      console.log('Exporting transcript with grades:', grades.map(g => ({
+        course: g.course_code,
+        status: g.status,
+        decrypted: decryptedGrades[g.id]
+      })));
+      
+      // Debug log to check work terms
+      console.log('Work terms for transcript:', workTerms);
+      console.log('Is co-op program:', program?.coop_program);
+      
+      // Filter grades that should be included in the transcript
+      const gradesForTranscript = grades.filter(grade => {
+        const decryptedValue = decryptedGrades[grade.id];
+        // Skip if no decrypted value
+        if (!decryptedValue || 
+            decryptedValue === 'N/A' || 
+            decryptedValue === 'Error' || 
+            decryptedValue === 'Decryption Error' ||
+            decryptedValue.trim() === '') {
+          return false;
+        }
+        
+        // Include if the grade is marked as completed OR has a valid grade value
+        return grade.status === 'completed' || decryptedValue.trim() !== '';
+      });
+      
+      // Group grades by year and term for the transcript
+      const transcriptGrades: { [year: number]: { [term: string]: Grade[] } } = {};
+      
+      gradesForTranscript.forEach(grade => {
+        if (!transcriptGrades[grade.year]) {
+          transcriptGrades[grade.year] = {};
+        }
+        if (!transcriptGrades[grade.year][grade.term]) {
+          transcriptGrades[grade.year][grade.term] = [];
+        }
+        transcriptGrades[grade.year][grade.term].push(grade);
+      });
+      
+      // Create the PDF document
+      const doc = new jsPDF();
+      
+      // Set font to Times New Roman
+      doc.setFont("times", "normal");
+      
+      // Add header
+      doc.setFontSize(25);
+      doc.text('Academic Transcript', 105, 20, { align: 'center' });
+      
+      // Add student information
+      doc.setFontSize(12);
+      if (userProfile) {
+        doc.text(`Name: ${userProfile.first_name} ${userProfile.last_name}`, 20, 30);
+        doc.text(`Student Number: ${userProfile.student_number}`, 20, 40);
+        doc.text(`Program: ${program?.program_name || 'Not specified'}`, 20, 50);
+      }
+      
+      // Add degree progress statistics
+      doc.setFontSize(14);
+      doc.setTextColor(41, 128, 185);
+      doc.text('Degree Progress', 20, 65);
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      
+      // Calculate statistics
+      const completedCourses = grades.filter(g => g.status === 'completed').length;
+      const inProgressCourses = grades.filter(g => g.status === 'in-progress').length;
+      const totalCourses = completedCourses + inProgressCourses;
+      const remainingCourses = Math.max(0, 40 - totalCourses);
+      const percentComplete = Math.min(100, Math.round((completedCourses / 40) * 100));
+      
+      // Calculate GPA
+      const allGrades: string[] = [];
+      grades.forEach(grade => {
+        const decryptedGrade = decryptedGrades[grade.id];
+        if (grade.status === 'completed' && decryptedGrade && decryptedGrade !== 'Error' && decryptedGrade !== 'Decryption Error' && decryptedGrade !== 'N/A') {
+          let letterGrade = decryptedGrade;
+          if (!isNaN(Number(decryptedGrade))) {
+            letterGrade = numericToLetterGrade(Number(decryptedGrade));
+          }
+          allGrades.push(letterGrade);
+        }
+      });
+      const overallGPA = calculateGPA(allGrades);
+      
+      // Add statistics table
+      autoTable(doc, {
+        startY: 70,
+        head: [['Category', 'Progress']],
+        body: [
+          ['Completed Courses', completedCourses.toString()],
+          ['In Progress Courses', inProgressCourses.toString()],
+          ['Remaining Courses', remainingCourses.toString()],
+          ['Overall Degree Progress', `${percentComplete}%`],
+          ['Overall GPA', overallGPA.toFixed(2)]
+        ],
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [41, 128, 185],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          font: 'times',
+          halign: 'center'
+        },
+        styles: { 
+          fontSize: 10,
+          cellPadding: 3,
+          font: 'times'
+        },
+        columnStyles: {
+          1: { halign: 'center' } // Center the Progress column
+        },
+        margin: { left: 20 },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245]
+        }
+      });
+      
+      // Add work terms section if this is a co-op program
+      let yPos = doc.lastAutoTable.finalY + 20;
+      
+      // Check if this is a co-op program and work terms exist
+      if (program?.coop_program && workTerms && workTerms.length > 0) {
+        // Add work terms header
+        doc.setFontSize(14);
+        doc.setTextColor(41, 128, 185);
+        doc.text('Co-op Work Terms', 20, yPos);
+        doc.setTextColor(0, 0, 0);
+        yPos += 10;
+        
+        // Sort work terms alphabetically by term name
+        const sortedWorkTerms = [...workTerms].sort((a, b) => {
+          return a.term_name.localeCompare(b.term_name);
+        });
+        
+        // Prepare work terms data
+        const workTermsData = sortedWorkTerms.map(term => [
+          term.term_name,
+          term.company_name || 'N/A',
+          term.status === 'completed' ? 'Completed' : 'In Progress'
+        ]);
+        
+        // Add work terms table
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Term', 'Company', 'Status']],
+          body: workTermsData,
+          theme: 'grid',
+          headStyles: { 
+            fillColor: [41, 128, 185],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            font: 'times',
+            halign: 'center'
+          },
+          styles: { 
+            fontSize: 10,
+            cellPadding: 3,
+            font: 'times'
+          },
+          columnStyles: {
+            1: { halign: 'center' }, // Center the Company column
+            2: { halign: 'center' }  // Center the Status column
+          },
+          margin: { left: 20 },
+          alternateRowStyles: {
+            fillColor: [245, 245, 245]
+          }
+        });
+        
+        yPos = doc.lastAutoTable.finalY + 20;
+      }
+      
+      // Add grades by term
+      const years = Object.keys(transcriptGrades).map(Number).sort((a, b) => b - a);
+      
+      for (const year of years) {
+        const terms = Object.keys(transcriptGrades[year]).sort();
+        
+        for (const term of terms) {
+          const termGrades = transcriptGrades[year][term];
+          
+          // Add term header
+          doc.setFontSize(14);
+          doc.setTextColor(41, 128, 185);
+          doc.text('Completed Courses', 20, yPos);
+          doc.setTextColor(0, 0, 0);
+          yPos += 10;
+          
+          // Sort grades alphabetically by course code
+          const sortedTermGrades = [...termGrades].sort((a, b) => {
+            return a.course_code.localeCompare(b.course_code);
+          });
+          
+          // Add grades table
+          const tableData = sortedTermGrades.map(grade => [
+            grade.course_code,
+            decryptedGrades[grade.id] || 'N/A',
+            grade.status
+          ]);
+          
+          autoTable(doc, {
+            startY: yPos,
+            head: [['Course', 'Grade', 'Status']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { 
+              fillColor: [41, 128, 185],
+              textColor: [255, 255, 255],
+              fontStyle: 'bold',
+              font: 'times',
+              halign: 'center'
+            },
+            styles: { 
+              fontSize: 10,
+              cellPadding: 3,
+              font: 'times'
+            },
+            columnStyles: {
+              1: { halign: 'center' }, // Center the Grade column
+              2: { halign: 'center' }  // Center the Status column
+            },
+            margin: { left: 20 },
+            alternateRowStyles: {
+              fillColor: [245, 245, 245]
+            }
+          });
+          
+          yPos = doc.lastAutoTable.finalY + 10;
+          
+          // Add new page if needed
+          if (yPos > 250) {
+            doc.addPage();
+            yPos = 20;
+          }
+        }
+      }
+      
+      // Add footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(`Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
+        doc.text('This is an unofficial transcript. For official transcripts, please contact Brock admissions office.', 105, 290, { align: 'center' });
+        doc.text(`Generated on: ${format(new Date(), 'MMMM d, yyyy')}`, 105, 295, { align: 'center' });
+      }
+      
+      // Save the PDF
+      doc.save('academic_transcript.pdf');
+      setSuccess('Transcript exported successfully');
+    } catch (err) {
+      console.error('Error exporting transcript:', err);
+      setError('Failed to export transcript. Please try again.');
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+  
   return (
     <div className="space-y-8">
       {error && (
@@ -376,7 +681,35 @@ export default function GradesList({ grades, decryptedGrades, graduationProjecti
       
       {/* Degree Progress Overview */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-100 dark:border-gray-700">
-        <h2 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Degree Progress</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Degree Progress</h2>
+          
+          <button 
+            onClick={exportTranscript}
+            disabled={exportingPdf || completedCourses === 0}
+            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium 
+              ${exportingPdf || completedCourses === 0 
+                ? 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 cursor-not-allowed' 
+                : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600'}`}
+          >
+            {exportingPdf ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export Transcript (PDF)
+              </>
+            )}
+          </button>
+        </div>
         
         <div className="flex items-center mb-4">
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mr-4 overflow-hidden">
