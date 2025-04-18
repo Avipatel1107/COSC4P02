@@ -372,9 +372,6 @@ export default async function GradesPage() {
             grades={grades || []} 
             decryptedGrades={decryptedGrades}
             graduationProjection={graduationProjection}
-            userProfile={userProfile}
-            program={programInfo}
-            workTerms={workTerms}
           />
         </div>
 
