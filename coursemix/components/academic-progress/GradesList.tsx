@@ -97,7 +97,20 @@ export default function GradesList({
       setDebugInfo(`Some grades might have decryption issues: ${missingDecryptions.map(g => g.course_code).join(', ')}`);
       // console.warn('Grades missing decryption:', missingDecryptions);
     }
-  }, [grades, decryptedGrades]);
+    
+    // Debug log to check userProfile and program data
+    console.log('GradesList - User Profile:', userProfile);
+    console.log('GradesList - Program:', program);
+    
+    // Check if userProfile or program data is missing
+    if (!userProfile) {
+      setDebugInfo(prev => `${prev ? prev + ' | ' : ''}User profile data is missing`);
+    }
+    
+    if (!program) {
+      setDebugInfo(prev => `${prev ? prev + ' | ' : ''}Program data is missing`);
+    }
+  }, [grades, decryptedGrades, userProfile, program]);
   
   // Group grades by year and term
   const groupedGrades: GroupedGrades = {};
@@ -385,6 +398,10 @@ export default function GradesList({
         decrypted: decryptedGrades[g.id]
       })));
       
+      // Debug log to check userProfile and program data
+      console.log('PDF Export - User Profile:', userProfile);
+      console.log('PDF Export - Program:', program);
+      
       // Debug log to check work terms
       console.log('Work terms for transcript:', workTerms);
       console.log('Is co-op program:', program?.coop_program);
@@ -428,18 +445,46 @@ export default function GradesList({
       doc.setFontSize(25);
       doc.text('Academic Transcript', 105, 20, { align: 'center' });
       
-      // Add student information
+      // Debug log to check userProfile and program data
+      console.log('PDF Generation - User Profile:', userProfile);
+      console.log('PDF Generation - Program:', program);
+      
+      // Add student information with more robust checks
       doc.setFontSize(12);
+      
+      // Always display student information section, even if data is missing
+      doc.text('Student Information', 20, 30);
+      
       if (userProfile) {
-        doc.text(`Name: ${userProfile.first_name} ${userProfile.last_name}`, 20, 30);
-        doc.text(`Student Number: ${userProfile.student_number}`, 20, 40);
-        doc.text(`Program: ${program?.program_name || 'Not specified'}`, 20, 50);
+        // Display name if available
+        if (userProfile.first_name || userProfile.last_name) {
+          doc.text(`Name: ${userProfile.first_name || ''} ${userProfile.last_name || ''}`, 20, 40);
+        } else {
+          doc.text('Name: Not available', 20, 40);
+        }
+        
+        // Display student number if available
+        if (userProfile.student_number) {
+          doc.text(`Student Number: ${userProfile.student_number}`, 20, 50);
+        } else {
+          doc.text('Student Number: Not available', 20, 50);
+        }
+      } else {
+        doc.text('Name: Not available', 20, 40);
+        doc.text('Student Number: Not available', 20, 50);
+      }
+      
+      // Display program information if available
+      if (program && program.program_name) {
+        doc.text(`Program: ${program.program_name}`, 20, 60);
+      } else {
+        doc.text('Program: Not specified', 20, 60);
       }
       
       // Add degree progress statistics
       doc.setFontSize(14);
       doc.setTextColor(41, 128, 185);
-      doc.text('Degree Progress', 20, 65);
+      doc.text('Degree Progress', 20, 75);
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
       
@@ -466,7 +511,7 @@ export default function GradesList({
       
       // Add statistics table
       autoTable(doc, {
-        startY: 70,
+        startY: 80,
         head: [['Category', 'Progress']],
         body: [
           ['Completed Courses', completedCourses.toString()],
